@@ -1,0 +1,16 @@
+node_modules/
+dist/
+__pycache__/
+.venv/
+.env
+*.pyc
+.pytest_cache/
+.dev_jwt_secret
+*.db
+
+frontend/.env.app
+backend/.env
+frontend/android/.gradle/
+frontend/android/app/build/
+frontend/android/local.properties
+frontend/android/app/src/main/assets/
