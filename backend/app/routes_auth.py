@@ -59,8 +59,15 @@ def _out(request: Request, user: User) -> dict:
 
 
 def _start_session(response: Response, user: User) -> None:
-    response.set_cookie(COOKIE, create_token(user.id), httponly=True, samesite="lax",
-                        secure=settings.env == "production", max_age=settings.session_hours * 3600, path="/")
+    response.set_cookie(
+        COOKIE,
+        create_token(user.id),
+        httponly=True,
+        samesite="none",
+        secure=True,
+        max_age=settings.session_hours * 3600,
+        path="/"
+    )
 
 
 def _authenticate(body: LoginIn, request: Request, db: Session) -> User:
