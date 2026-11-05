@@ -43,6 +43,9 @@ textarea { width: 100%; }
 .links { display: flex; gap: 16px; flex-wrap: wrap; } .links a { font-weight: 600; }
 .stack { display: grid; gap: 14px; }
 .page.narrow { max-width: 720px; } .page.wide { max-width: 1280px; }
+.form { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.form > * { min-width: 0; max-width: 100%; }
+.form fieldset { min-inline-size: 0; }
 .form-grid { display: grid; gap: 14px; } .form-grid h2 { margin: 8px 0 0; font-size: 1.1rem; }
 @media (min-width: 640px) { .form-grid { grid-template-columns: 1fr 1fr; } .form-grid > h2, .form-grid > h3, .form-grid > .row, .form-grid > p, .form-grid > label:has(textarea) { grid-column: 1 / -1; } }
 .profile-head { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; } .profile-head h1 { margin: 0; }
@@ -114,6 +117,11 @@ a.tile:hover { border-color: var(--forge); } .tile.off { opacity: .75; }
 .seg .done { background: var(--good); } .seg .now { background: var(--forge); } .lesson-top .count { color: var(--steel); font-weight: 600; font-size: .9rem; }
 .lesson-layout { flex: 1; display: grid; grid-template-columns: 260px 1fr; gap: 28px; width: 100%; max-width: 1100px; margin: 0 auto; padding: 8px 20px 110px; }
 .lesson-card { padding: 22px; min-width: 0; } .lesson-card h1 { font-size: clamp(1.4rem, 5vw, 2rem); }
+.md { min-width: 0; max-width: 100%; }
+.md p, .md li { overflow-wrap: anywhere; }
+.md pre, .md table { max-width: 100%; overflow-x: auto; }
+.md table { display: block; }
+.md img { max-width: 100%; height: auto; }
 .chip { display: inline-block; margin: 0 0 6px; padding: 2px 12px; border-radius: 99px; background: color-mix(in srgb, var(--forge) 12%, transparent); color: var(--forge); font-weight: 600; font-size: .82rem; }
 .lesson-side h2 { font-size: 1.05rem; margin-top: 0; } .lesson-side h3 { font-size: .85rem; margin-top: 1em; color: var(--steel); }
 .lesson-bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line); }
