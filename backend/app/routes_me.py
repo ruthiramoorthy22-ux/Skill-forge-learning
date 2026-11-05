@@ -70,7 +70,9 @@ def get_leaderboard(db: Session = Depends(get_db)):
 def recommendations(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Next lesson in the most recently active unfinished course, plus available courses not yet joined."""
     items = []
-    enrollments = db.scalars(select(Enrollment).where(Enrollment.user_id == user.id).order_by(Enrollment.last_activity_at.desc())).all()
+    enrollments = db.scalars(select(Enrollment).join(Course).where(
+        Enrollment.user_id == user.id, Course.status == "available"
+    ).order_by(Enrollment.last_activity_at.desc())).all()
     done_ids = set(db.scalars(select(LessonProgress.lesson_id).where(LessonProgress.user_id == user.id)).all())
     for e in enrollments:
         nxt = next((l for m in e.course.modules for l in m.lessons if l.published and l.id not in done_ids), None)

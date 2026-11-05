@@ -21,7 +21,7 @@ def seed_all():
 
 
 def student(email="learner@example.com", name="Learner", enroll=None) -> TestClient:
-    c = TestClient(app)
+    c = TestClient(app, base_url="https://testserver")
     assert c.post("/api/auth/register", json={"email": email, "display_name": name, "password": PW}).status_code == 201
     if enroll:
         assert c.post(f"/api/courses/{enroll}/enroll").status_code == 200
@@ -31,7 +31,7 @@ def student(email="learner@example.com", name="Learner", enroll=None) -> TestCli
 def admin() -> TestClient:
     with SessionLocal() as db:
         create_admin(db, settings.admin_email, ADMIN_PW)
-    c = TestClient(app)
+    c = TestClient(app, base_url="https://testserver")
     assert c.post("/api/auth/admin/login", json={"email": settings.admin_email, "password": ADMIN_PW}).status_code == 200
     return c
 

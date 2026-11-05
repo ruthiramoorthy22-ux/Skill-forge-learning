@@ -103,7 +103,7 @@ def test_student_profile_saves_and_validates():
     assert c.put("/api/me/profile", json={**body, "display_name": "   "}).status_code == 422
     from fastapi.testclient import TestClient
     from app.main import app
-    assert TestClient(app).get("/api/me/profile").status_code == 401
+    assert TestClient(app, base_url="https://testserver").get("/api/me/profile").status_code == 401
 
 
 def test_name_locks_after_certificate_but_admin_can_edit_everything():

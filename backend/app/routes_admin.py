@@ -257,7 +257,7 @@ def admin_courses(_: User = Depends(require_admin), db: Session = Depends(get_db
         lessons = [l for m in c.modules for l in m.lessons]
         enr = db.scalars(select(Enrollment).where(Enrollment.course_id == c.id)).all()
         done = sum(1 for e in enr if completion(db, e.user_id, c)["completed"])
-        items.append({"id": c.id, "slug": c.slug, "title": c.title, "level": c.level, "published": c.published,
+        items.append({"id": c.id, "slug": c.slug, "title": c.title, "level": c.level, "published": c.published, "status": c.status,
                       "category_id": c.category_id, "summary": c.summary, "objectives": c.objectives, "est_minutes": c.est_minutes,
                       "is_paid": c.is_paid, "price_inr": c.price_inr, "effective_price_inr": certificates.price_for(db, c),
                       "project_title": c.project_title, "project_description": c.project_description,
@@ -266,11 +266,24 @@ def admin_courses(_: User = Depends(require_admin), db: Session = Depends(get_db
     return {"items": items}
 
 
+@router.post("/courses/publish-all")
+def publish_all_courses(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    courses = db.scalars(select(Course)).all()
+    for course in courses:
+        course.published = True
+        course.status = "available"
+    audit(db, admin, "course.publish_all", "all courses", f"{len(courses)} courses")
+    db.commit()
+    return {"updated": len(courses)}
+
+
 @router.post("/courses", status_code=201)
 def create_course(body: CourseIn, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     if db.scalar(select(Course.id).where(Course.slug == body.slug)):
         raise HTTPException(status_code=409, detail="A course with this slug already exists.")
-    c = Course(**body.model_dump())
+    values = body.model_dump()
+    values["status"] = "available" if body.published else "planned"
+    c = Course(**values)
     db.add(c)
     db.flush()
     audit(db, admin, "course.create", c.slug)
@@ -289,6 +302,12 @@ def update_course(course_id: int, body: CoursePatch, admin: User = Depends(requi
     if "category_id" in changes and changes["category_id"] not in CATEGORY_IDS:
         raise HTTPException(status_code=422, detail="Unknown category.")
     was_published = c.published
+    if "published" in changes:
+        if changes["published"]:
+            changes["status"] = "available"
+        else:
+            has_lessons = any(m.lessons for m in c.modules)
+            changes["status"] = "in_development" if has_lessons else "planned"
     for k, v in changes.items():
         setattr(c, k, v)
     audit(db, admin, "course.update", c.slug, ", ".join(sorted(changes)))

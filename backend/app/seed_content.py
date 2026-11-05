@@ -387,7 +387,8 @@ def seed_content(db: Session) -> None:
             continue
         base = next(x for x in COURSES if x["slug"] == c["slug"])
         course = Course(slug=c["slug"], title=base["title"], category_id=base["category_id"], level=base["level"],
-                        summary=c["summary"], objectives=c["objectives"], est_minutes=c["est_minutes"], published=True)
+                        summary=c["summary"], objectives=c["objectives"], est_minutes=c["est_minutes"],
+                        published=True, status="available")
         for mi, m in enumerate(c["modules"], 1):
             module = Module(title=m["title"], position=mi)
             for li, l in enumerate(m["lessons"], 1):
@@ -396,4 +397,14 @@ def seed_content(db: Session) -> None:
                                              expected_output=l["out"], published=True))
             course.modules.append(module)
         db.add(course)
+    db.commit()
+
+
+def seed_catalog_courses(db: Session) -> None:
+    existing = set(db.scalars(select(Course.slug)).all())
+    for base in COURSES:
+        if base["slug"] in existing:
+            continue
+        db.add(Course(slug=base["slug"], title=base["title"], category_id=base["category_id"],
+                      level=base["level"], published=False, status=base["status"]))
     db.commit()

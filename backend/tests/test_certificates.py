@@ -158,10 +158,10 @@ def test_certificate_download_is_owner_or_admin_only_and_is_the_template(razorpa
     png = c.get(f"/api/certificates/{cid}/download?format=png")
     assert Image.open(io.BytesIO(png.content)).size == (1344, 896)
     assert student("x@example.com").get(f"/api/certificates/{cid}/download").status_code == 404
-    assert TestClient(app).get(f"/api/certificates/{cid}/download").status_code == 401
+    assert TestClient(app, base_url="https://testserver").get(f"/api/certificates/{cid}/download").status_code == 401
     assert admin().get(f"/api/certificates/{cid}/download?format=png").status_code == 200
     assert c.get("/api/me/certificates").json()["items"][0]["course"] == "HTML5"
-    pub = TestClient(app).get(f"/api/certificates/verify/{cid}").json()
+    pub = TestClient(app, base_url="https://testserver").get(f"/api/certificates/verify/{cid}").json()
     assert pub["valid"] is True and pub["student"] == "Asha Raman" and pub["course"] == "HTML5"
     assert c.patch("/api/me", json={"display_name": "Someone Else"}).status_code == 409   # name is locked once printed
 
@@ -189,7 +189,7 @@ def test_webhook_checks_signature_and_is_idempotent(razorpay, outbox):
     complete_course(c, "html5")
     order = c.post("/api/courses/html5/certificate/order").json()
     event = json.dumps({"event": "payment.captured", "payload": {"payment": {"entity": {"id": "pay_W", "order_id": order["order_id"], "amount": 5500, "status": "captured", "method": "upi"}}}}).encode()
-    hook = TestClient(app)
+    hook = TestClient(app, base_url="https://testserver")
     assert hook.post("/api/payments/razorpay/webhook", content=event, headers={"x-razorpay-signature": "bad"}).status_code == 400
     good = {"x-razorpay-signature": hmac.new(WEBHOOK.encode(), event, hashlib.sha256).hexdigest()}
     assert hook.post("/api/payments/razorpay/webhook", content=event, headers=good).status_code == 200
@@ -200,7 +200,7 @@ def test_webhook_checks_signature_and_is_idempotent(razorpay, outbox):
 
 
 def test_webhook_refuses_when_secret_not_configured():
-    assert TestClient(app).post("/api/payments/razorpay/webhook", content=b"{}").status_code == 503
+    assert TestClient(app, base_url="https://testserver").post("/api/payments/razorpay/webhook", content=b"{}").status_code == 503
 
 
 def test_admin_certificate_desk_lists_paid_certificates(razorpay, outbox):
@@ -272,13 +272,13 @@ def test_admin_can_edit_and_delete_questions():
 
 
 def test_android_app_gets_a_bearer_token_but_the_website_does_not():
-    web = TestClient(app)
+    web = TestClient(app, base_url="https://testserver")
     r = web.post("/api/auth/register", json={"email": "w@example.com", "display_name": "Web", "password": PW})
     assert "token" not in r.json()
-    mobile = TestClient(app)
+    mobile = TestClient(app, base_url="https://testserver")
     r = mobile.post("/api/auth/login", json={"email": "w@example.com", "password": PW}, headers={"X-Client": "app"})
     token = r.json()["token"]
-    bare = TestClient(app)                                                   # no cookie at all
+    bare = TestClient(app, base_url="https://testserver")                   # no cookie at all
     assert bare.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"}).json()["email"] == "w@example.com"
     assert bare.get("/api/auth/me", headers={"Authorization": "Bearer nonsense"}).status_code == 401
 
@@ -299,7 +299,7 @@ def test_short_lived_download_link_works_without_a_session(razorpay, outbox):
     complete_course(c, "html5")
     cid = pay_for(c)[1].json()["certificate_id"]
     url = c.post(f"/api/certificates/{cid}/link?format=png").json()["url"]
-    anon = TestClient(app)
+    anon = TestClient(app, base_url="https://testserver")
     assert anon.get(url).status_code == 200 and anon.get(url).headers["content-type"] == "image/png"
     assert anon.get(f"/api/certificates/{cid}/download?t=garbage").status_code == 403
     other = student("not-mine@example.com")

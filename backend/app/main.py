@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from . import models  # noqa: F401  (registers tables)
 from .catalog import CATEGORIES, COURSES
-from .models import Project
+from .models import Course, Project
 from .config import settings
 from .db import Base, SessionLocal, engine, get_db
 from .routes_auth import router as auth_router
@@ -23,7 +23,7 @@ from .routes_templates import router as templates_router
 from .routes_quiz import router as quiz_router
 from .routes_student import router as student_router
 from .seed_assessments import seed_assessments
-from .seed_content import seed_content
+from .seed_content import seed_catalog_courses, seed_content
 from .seed_projects import seed_projects
 
 
@@ -41,6 +41,7 @@ NEW_COLUMNS = [
     ("courses", "price_inr", "INTEGER"),
     ("courses", "project_title", "VARCHAR(160) NOT NULL DEFAULT ''"),
     ("courses", "project_description", "TEXT NOT NULL DEFAULT ''"),
+    ("courses", "status", "VARCHAR(20)"),
     ("payments", "method", "VARCHAR(20) NOT NULL DEFAULT ''"),
     ("payments", "failure_reason", "VARCHAR(200) NOT NULL DEFAULT ''"),
     ("payments", "note", "VARCHAR(200) NOT NULL DEFAULT ''"),
@@ -57,12 +58,22 @@ def add_missing_columns() -> None:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}"))
 
 
+def backfill_course_statuses() -> None:
+    catalog_status = {course["slug"]: course["status"] for course in COURSES}
+    with SessionLocal() as db:
+        for course in db.scalars(select(Course).where(Course.status.is_(None))).all():
+            course.status = "available" if course.published else catalog_status.get(course.slug, "planned")
+        db.commit()
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(engine)  # Alembic migrations come later
     add_missing_columns()
+    backfill_course_statuses()
     with SessionLocal() as db:
         seed_content(db)  # idempotent: never overwrites existing courses
+        seed_catalog_courses(db)  # inserts only catalog slugs not already stored
         seed_assessments(db)
         seed_projects(db)
     yield
@@ -112,9 +123,11 @@ def courses(
     db: Session = Depends(get_db),
 ):
     counts = lesson_counts(db)
+    stored = {course.slug: course for course in db.scalars(select(Course)).all()}
     items = [{**c, "lesson_count": counts.get(c["slug"], 0),
-              "status": "available" if counts.get(c["slug"]) else c["status"]} for c in COURSES]
+              "status": stored[c["slug"]].status if c["slug"] in stored else c["status"]} for c in COURSES]
     items += extra_courses(db, counts)
+    items = [course for course in items if course["status"] == "available"]
     prices = pricing_map(db)
     for it in items:
         if it["slug"] in prices:

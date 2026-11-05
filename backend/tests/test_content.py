@@ -49,7 +49,7 @@ def test_course_detail_outline_is_public_but_lessons_are_not(client):
     d = client.get("/api/courses/python").json()
     assert d["lesson_count"] == 5 and len(d["outline"]) == 2 and "body_md" not in str(d)
     assert client.get("/api/courses/python/lessons/loops").status_code == 401
-    assert client.get("/api/courses/java").json()["outline"] is None
+    assert client.get("/api/courses/java").status_code == 404
 
 
 def test_must_enroll_before_reading_lessons(client):

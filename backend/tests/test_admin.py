@@ -2,12 +2,17 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
 from app.db import SessionLocal
 from app.main import app
-from app.models import Lesson, LessonProgress, User, UserPresence
-from helpers import PW, admin, seed_all, student
+from app import main as app_main
+from app.models import Course, Lesson, LessonProgress, User, UserPresence
+from app.catalog import COURSES
+from app.seed_content import seed_catalog_courses
+from helpers import ADMIN_PW, PW, admin, seed_all, student
 
 ADMIN_GETS = ["/api/admin/overview", "/api/admin/students", "/api/admin/students/export.csv", "/api/admin/live",
               "/api/admin/courses", "/api/admin/enrollments", "/api/admin/audit-logs", "/api/admin/analytics",
@@ -60,7 +65,7 @@ def test_student_detail_and_status_control():
     assert d["course_history"][0]["course"] == "Python" and d["assessment_history"] == []
     assert a.patch(f"/api/admin/students/{sid}/status", json={"status": "disabled"}).status_code == 200
     assert s.get("/api/auth/me").status_code == 401  # existing session stops working
-    assert TestClient(app).post("/api/auth/login", json={"email": "asha@example.com", "password": PW}).status_code == 403
+    assert TestClient(app, base_url="https://testserver").post("/api/auth/login", json={"email": "asha@example.com", "password": PW}).status_code == 403
     with SessionLocal() as db:
         admin_id = db.query(User).filter_by(role="admin").one().id
     assert a.patch(f"/api/admin/students/{admin_id}/status", json={"status": "disabled"}).status_code == 404
@@ -98,6 +103,106 @@ def test_course_lifecycle_preserves_progress_and_is_audited():
         assert db.query(LessonProgress).count() == 1
     acts = [x["action"] for x in a.get("/api/admin/audit-logs").json()["items"]]
     assert {"course.create", "course.update", "module.create", "lesson.create", "lesson.update"} <= set(acts)
+
+
+def _bearer_admin():
+    a = admin()
+    response = a.post("/api/auth/admin/login", json={"email": settings.admin_email, "password": ADMIN_PW},
+                      headers={"X-Client": "app"})
+    a.headers["Authorization"] = f"Bearer {response.json()['token']}"
+    return a
+
+
+def _bearer_student(email="course-manager-student@example.com"):
+    s = TestClient(app, base_url="https://testserver")
+    response = s.post("/api/auth/register", json={"email": email, "display_name": "Learner", "password": PW},
+                      headers={"X-Client": "app"})
+    s.headers["Authorization"] = f"Bearer {response.json()['token']}"
+    return s
+
+
+def test_admin_lists_full_catalog_and_single_publish_persists_after_relogin():
+    seed_all()
+    with SessionLocal() as db:
+        python = db.query(Course).filter_by(slug="python").one()
+        python_id = python.id
+        lesson_count = sum(len(module.lessons) for module in python.modules)
+        seed_catalog_courses(db)
+        python = db.query(Course).filter_by(slug="python").one()
+        assert python.id == python_id
+        assert sum(len(module.lessons) for module in python.modules) == lesson_count
+
+    a = _bearer_admin()
+    items = a.get("/api/admin/courses").json()["items"]
+    assert len(items) == len(COURSES)
+    target = next(item for item in items if item["slug"] == "python")
+    assert target["status"] == "available"
+
+    s = _bearer_student()
+    assert s.patch(f"/api/admin/courses/{target['id']}", json={"published": False}).status_code == 403
+    assert a.patch(f"/api/admin/courses/{target['id']}", json={"published": False}).json()["published"] is False
+    assert next(item for item in a.get("/api/admin/courses").json()["items"] if item["id"] == target["id"])["status"] == "in_development"
+    assert a.patch(f"/api/admin/courses/{target['id']}", json={"published": True}).json()["published"] is True
+    assert next(item for item in a.get("/api/admin/courses").json()["items"] if item["id"] == target["id"])["status"] == "available"
+
+    a.post("/api/auth/logout")
+    a.headers.pop("Authorization", None)
+    login = a.post("/api/auth/admin/login", json={"email": settings.admin_email, "password": ADMIN_PW},
+                   headers={"X-Client": "app"})
+    a.headers["Authorization"] = f"Bearer {login.json()['token']}"
+    assert next(item for item in a.get("/api/admin/courses").json()["items"] if item["id"] == target["id"])["status"] == "available"
+    assert next(item for item in a.get("/api/courses?status=available&page_size=100").json()["items"]
+                if item["slug"] == "python")["status"] == "available"
+
+
+def test_publish_all_is_admin_only_and_student_enrollments_hide_unavailable_courses():
+    seed_all()
+    with SessionLocal() as db:
+        seed_catalog_courses(db)
+    a = _bearer_admin()
+    s = _bearer_student("bulk-publish-student@example.com")
+    assert s.post("/api/admin/courses/publish-all").status_code == 403
+    assert s.patch("/api/admin/courses/1", json={"published": True}).status_code == 403
+
+    result = a.post("/api/admin/courses/publish-all")
+    assert result.status_code == 200 and result.json()["updated"] == len(COURSES)
+    assert a.get("/api/courses?status=available&page_size=100").json()["total"] == len(COURSES)
+    without_lessons = next(item for item in a.get("/api/admin/courses").json()["items"] if item["lessons"] == 0)
+    assert a.get(f"/api/courses/{without_lessons['slug']}").json()["status"] == "available"
+
+    python_id = next(item["id"] for item in a.get("/api/admin/courses").json()["items"] if item["slug"] == "python")
+    assert s.post("/api/courses/python/enroll").status_code == 200
+    assert len(s.get("/api/me/enrollments").json()["items"]) == 1
+    a.patch(f"/api/admin/courses/{python_id}", json={"published": False})
+    assert s.get("/api/me/enrollments").json()["items"] == []
+    assert all(item["course_slug"] != "python" for item in s.get("/api/me/recommendations").json()["items"])
+    assert all(item["slug"] != "python" for item in s.get("/api/courses?q=Python&page_size=100").json()["items"])
+    assert s.get("/api/courses/python").status_code == 404
+    assert s.get("/api/courses/python/lessons/first-program").status_code == 404
+
+
+def test_legacy_course_schema_migration_preserves_ids_and_backfills_status(monkeypatch):
+    legacy_engine = create_engine("sqlite:///:memory:")
+    with legacy_engine.begin() as conn:
+        conn.execute(text("""CREATE TABLE courses (
+            id INTEGER PRIMARY KEY, slug VARCHAR(80), title VARCHAR(120), category_id VARCHAR(60),
+            level VARCHAR(12), summary TEXT, objectives JSON, est_minutes INTEGER, published BOOLEAN
+        )"""))
+        conn.execute(text("""INSERT INTO courses
+            (id, slug, title, category_id, level, summary, objectives, est_minutes, published)
+            VALUES (73, 'python', 'Python', 'programming-languages', 'beginner', '', '[]', 0, TRUE)"""))
+        conn.execute(text("""INSERT INTO courses
+            (id, slug, title, category_id, level, summary, objectives, est_minutes, published)
+            VALUES (91, 'html5', 'HTML5', 'web-development', 'beginner', '', '[]', 0, FALSE)"""))
+
+    monkeypatch.setattr(app_main, "engine", legacy_engine)
+    monkeypatch.setattr(app_main, "SessionLocal", sessionmaker(bind=legacy_engine))
+    app_main.add_missing_columns()
+    app_main.backfill_course_statuses()
+
+    with legacy_engine.connect() as conn:
+        rows = conn.execute(text("SELECT id, slug, status FROM courses ORDER BY id")).all()
+    assert rows == [(73, "python", "available"), (91, "html5", "in_development")]
 
 
 def test_admin_quiz_validation_and_publish_toggle():

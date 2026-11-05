@@ -154,7 +154,7 @@ def test_failed_payment_is_recorded_shown_in_history_and_can_still_succeed_later
 def test_webhook_duplicate_events_and_wrong_amounts(razorpay, outbox):
     c, _ = ready_student()
     order = c.post("/api/courses/html5/certificate/order").json()
-    hook = TestClient(app)
+    hook = TestClient(app, base_url="https://testserver")
 
     def send(event_id, amount, pay_id="pay_W", name="payment.captured"):
         body = json.dumps({"event": name, "payload": {"payment": {"entity": {"id": pay_id, "order_id": order["order_id"], "amount": amount,
@@ -176,7 +176,7 @@ def test_webhook_failed_event_records_the_reason(razorpay):
     order = c.post("/api/courses/html5/certificate/order").json()
     body = json.dumps({"event": "payment.failed", "payload": {"payment": {"entity": {"id": "pay_F", "order_id": order["order_id"], "error_description": "Card expired"}}}}).encode()
     sig = hmac.new(WEBHOOK.encode(), body, hashlib.sha256).hexdigest()
-    assert TestClient(app).post("/api/payments/razorpay/webhook", content=body, headers={"x-razorpay-signature": sig, "x-razorpay-event-id": "evt_f"}).status_code == 200
+    assert TestClient(app, base_url="https://testserver").post("/api/payments/razorpay/webhook", content=body, headers={"x-razorpay-signature": sig, "x-razorpay-event-id": "evt_f"}).status_code == 200
     assert c.get("/api/me/payments").json()["items"][0]["failure_reason"] == "Card expired"
 
 
@@ -279,7 +279,7 @@ def test_profile_picture_is_validated_resized_and_removable():
     assert c.put("/api/me/avatar", json={"image": "data:image/png;base64,AAAA"}).status_code == 422          # not an image
     assert c.put("/api/me/avatar", json={"image": "data:text/html;base64,PGI+"}).status_code == 422
     assert c.delete("/api/me/avatar").json() == {"avatar": ""} and c.get("/api/me/profile").json()["avatar"] == ""
-    assert TestClient(app).put("/api/me/avatar", json={"image": _png()}).status_code == 401
+    assert TestClient(app, base_url="https://testserver").put("/api/me/avatar", json={"image": _png()}).status_code == 401
 
 
 # --------------------------------------------------------------------------- certificate designs

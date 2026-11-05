@@ -79,16 +79,17 @@ def _require_enrolled(db: Session, user: User, course: Course) -> Enrollment:
 def course_detail(slug: str, db: Session = Depends(get_db)):
     base = next((c for c in COURSES if c["slug"] == slug), None)
     course = _course(db, slug)
-    if base is None and course is not None:
+    if course is None:
+        raise HTTPException(status_code=404, detail="Course not found")
+    if base is None:
         base = {"slug": course.slug, "title": course.title, "category_id": course.category_id,
                 "category_name": next((c["name"] for c in CATEGORIES if c["id"] == course.category_id), course.category_id),
                 "level": course.level, "status": "planned"}
-    if base is None:
-        raise HTTPException(status_code=404, detail="Course not found")
-    lessons = _lessons(course) if course else []
+    lessons = _lessons(course)
     out = {**base, "lesson_count": len(lessons), "outline": None, **pricing_map(db).get(slug, {})}
+    out["status"] = course.status
     if lessons:
-        out.update(status="available", summary=course.summary, objectives=course.objectives,
+        out.update(status=course.status, summary=course.summary, objectives=course.objectives,
                    est_minutes=course.est_minutes,
                    outline=[{"title": m.title, "lessons": [{"slug": l.slug, "title": l.title} for l in m.lessons if l.published]}
                             for m in course.modules if any(l.published for l in m.lessons)])
@@ -155,7 +156,9 @@ def complete_lesson(slug: str, lesson_slug: str, user: User = Depends(get_curren
 
 @router.get("/me/enrollments")
 def my_enrollments(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    rows = db.scalars(select(Enrollment).where(Enrollment.user_id == user.id).order_by(Enrollment.last_activity_at.desc())).all()
+    rows = db.scalars(select(Enrollment).join(Course).where(
+        Enrollment.user_id == user.id, Course.status == "available"
+    ).order_by(Enrollment.last_activity_at.desc())).all()
     items = []
     for e in rows:
         p = _progress(db, user, e.course)

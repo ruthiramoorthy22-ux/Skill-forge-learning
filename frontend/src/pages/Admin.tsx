@@ -95,6 +95,7 @@ function Courses() {
   const [msg, setMsg] = useState<string | null>(null);
   const [managing, setManaging] = useState<number | null>(null);
   const [editing, setEditing] = useState<Obj | null>(null);
+  const [publishingAll, setPublishingAll] = useState(false);
   useEffect(() => { api.categories().then(r => { setCats(r.items); setF(x => ({ ...x, category_id: r.items[0]?.id ?? "" })); }).catch(() => undefined); }, []);
   async function toggle(c: Obj) {
     if (!window.confirm(`${c.published ? "Unpublish" : "Publish"} "${c.title}"? Student progress is kept either way.`)) return;
@@ -106,6 +107,17 @@ function Courses() {
     if (!window.confirm(`Make "${c.title}" ${to}?`)) return;
     await http(`/admin/courses/${c.id}`, { method: "PATCH", body: { is_paid: !c.is_paid } }).catch(e => setMsg(errText(e)));
     load();
+  }
+  async function publishAll() {
+    if (!data || !window.confirm(`Publish all ${data.items.length} courses?`)) return;
+    setPublishingAll(true);
+    setMsg(null);
+    try {
+      const result = await http<{ updated: number }>("/admin/courses/publish-all", { method: "POST" });
+      setMsg(`Published ${result.updated} courses.`);
+      load();
+    } catch (er) { setMsg(errText(er)); }
+    finally { setPublishingAll(false); }
   }
   async function remove(c: Obj) {
     if (!window.confirm(`Delete "${c.title}" for good? Its lessons, tests and every student's progress in it are removed. Use Unpublish if you only want to hide it.`)) return;
@@ -122,8 +134,10 @@ function Courses() {
   return (
     <>
       <Err e={err} />
-      <div className="scroll"><table><thead><tr><th>Course</th><th>Published</th><th>Price</th><th>Project</th><th>Lessons</th><th>Enrollments</th><th>Completion</th><th></th></tr></thead>
-        <tbody>{data?.items.map((c: Obj) => <tr key={c.id}><td>{c.title}</td><td>{c.published ? "Yes" : "No"}</td><td>{c.is_paid ? `Rs ${c.effective_price_inr}` : "Free"} <button className="ghost" onClick={() => togglePaid(c)}>{c.is_paid ? "Make free" : "Make paid"}</button></td><td>{c.project_title || "-"}</td><td>{c.lessons}</td><td>{c.enrollments}</td>
+      <button className="solid" disabled={!data || publishingAll} onClick={publishAll}>{publishingAll ? "Publishing..." : `Publish All ${data?.items.length ?? 0} Courses`}</button>
+      {msg && <p role="status">{msg}</p>}
+      <div className="scroll"><table><thead><tr><th>Course</th><th>Status</th><th>Price</th><th>Project</th><th>Lessons</th><th>Enrollments</th><th>Completion</th><th></th></tr></thead>
+        <tbody>{data?.items.map((c: Obj) => <tr key={c.id}><td>{c.title}</td><td>{c.status}</td><td>{c.is_paid ? `Rs ${c.effective_price_inr}` : "Free"} <button className="ghost" onClick={() => togglePaid(c)}>{c.is_paid ? "Make free" : "Make paid"}</button></td><td>{c.project_title || "-"}</td><td>{c.lessons}</td><td>{c.enrollments}</td>
           <td>{c.completion_rate_pct === null ? "-" : `${c.completion_rate_pct}%`}</td><td><button className="ghost" onClick={() => setManaging(c.id)}>Manage lessons</button> <button className="ghost" onClick={() => setEditing(c)}>Edit</button> <button className="ghost" onClick={() => toggle(c)}>{c.published ? "Unpublish" : "Publish"}</button> <button className="ghost" onClick={() => remove(c)}>Delete</button></td></tr>)}</tbody></table></div>
       <h3>Create a course</h3>
       <form className="form" onSubmit={create}>
@@ -138,7 +152,6 @@ function Courses() {
         <label>Project description<textarea className="editor" rows={3} maxLength={3000} value={f.project_description} onChange={e => setF({ ...f, project_description: e.target.value })} /></label>
         <button className="solid">Create draft</button>
       </form>
-      {msg && <p role="status">{msg}</p>}
       <p className="muted">Quizzes, practice sets and final exams are in the Quizzes tab, coding challenges in the Challenges tab, guided projects in the Projects tab. Each course can be Free or Paid with its own price (the default price and the payment methods are in Settings). Publishing a course that has lessons, or a challenge, notifies every student.</p>
     </>
   );

@@ -41,6 +41,7 @@ class Course(Base):
     objectives: Mapped[list] = mapped_column(JSON, default=list)
     est_minutes: Mapped[int] = mapped_column(Integer, default=0)
     published: Mapped[bool] = mapped_column(Boolean, default=True)
+    status: Mapped[str] = mapped_column(String(20), default="planned", nullable=False)
     # Pricing: is_paid False = free (the certificate needs no payment). price_inr None = use the default price from Settings.
     is_paid: Mapped[bool] = mapped_column(Boolean, default=True)
     price_inr: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

@@ -27,7 +27,7 @@ def fresh_db():
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    return TestClient(app, base_url="https://testserver")
 
 
 @pytest.fixture(autouse=True)
