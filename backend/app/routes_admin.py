@@ -706,9 +706,9 @@ def send_certificate_email(cid: str, admin: User = Depends(require_admin), db: S
     student, course = db.get(User, cert.user_id), db.get(Course, cert.course_id)
     img, base = certificates.render_for(db, cert)
     try:
-        mailer.send_mail(student.email, f"Your SkillForge Learning certificate: {course.title}",
+        mailer.send_mail(student.email, f"Your Skill Forge Learning certificate: {course.title}",
                          f"Hello {student.display_name},\n\nCongratulations on completing {course.title}. "
-                         f"Your certificate is attached.\n\nSkillForge Learning", [(f"{base}.pdf", to_pdf(img), "application/pdf")])
+                         f"Your certificate is attached.\n\nSkill Forge Learning", [(f"{base}.pdf", to_pdf(img), "application/pdf")])
     except mailer.MailUnavailable as e:
         raise HTTPException(status_code=503, detail=f"{e} Download the certificate and email it manually, then use Mark as sent.")
     _mark_delivered(db, cid, "email", admin)

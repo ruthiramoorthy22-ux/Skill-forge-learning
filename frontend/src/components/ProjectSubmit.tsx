@@ -6,7 +6,7 @@ interface Info { can_submit: boolean; submission: Sub | null; assigned: { title:
 
 const LABEL = { submitted: "Waiting for admin review", approved: "Approved", changes_requested: "Changes requested" } as const;
 
-/** The project a student submits for a course. The admin reviews it before the certificate can be released. */
+/** Optional student project submission for practice and feedback from the admin. */
 export default function ProjectSubmit({ slug, onChange }: { slug: string; onChange: () => void }) {
   const [info, setInfo] = useState<Info | null>(null);
   const [f, setF] = useState({ title: "", description: "", repo_url: "", demo_url: "" });

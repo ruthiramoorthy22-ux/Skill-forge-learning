@@ -7,7 +7,7 @@ import { loadRazorpay } from "../razorpay";
 
 interface QuizMeta { id: number; title: string; kind: "chapter" | "final" | "practice"; pass_mark: number; time_limit_minutes: number | null; question_count: number }
 interface Exam { unlocked: boolean; message: string; missing_lessons: string[]; missing_tests: string[]; rule: string }
-interface Cert { price_inr: number; is_free?: boolean; can_pay?: boolean; payments_configured: boolean; course_completed: boolean; paid: boolean; awaiting_admin?: boolean; project_required?: boolean; project_approved?: boolean; project_status?: string | null; issued: boolean; certificate_id: string | null; locked_reason: string | null; final_result?: { state: "none" | "pending" | "released"; passed?: boolean } }
+interface Cert { price_inr: number; is_free?: boolean; can_pay?: boolean; payments_configured: boolean; course_completed: boolean; paid: boolean; awaiting_admin?: boolean; issued: boolean; certificate_id: string | null; locked_reason: string | null; final_result?: { state: "none" | "pending" | "released"; passed?: boolean } }
 interface Order { order_id: string; amount: number; currency: string; key_id: string; course_title: string; student_name: string; student_email: string }
 
 export default function CourseDetailPage() {
@@ -74,7 +74,7 @@ export default function CourseDetailPage() {
   const finalOpen = !!exam?.unlocked;
   const steps = [
     ["Lessons", lessonsDone], ["Tests", lessonsDone && testsDone], ["Final exam", !!cert?.course_completed],
-    ...(cert?.project_required === false ? [] : [["Project", !!cert?.project_approved]]), ...(cert?.is_free ? [] : [["Pay", !!cert?.paid]]), ["Certificate", !!cert?.issued],
+    ...(cert?.is_free ? [] : [["Pay", !!cert?.paid]]), ["Certificate", !!cert?.issued],
   ] as [string, boolean][];
   const shownPrice = cert?.price_inr ?? price;
   const previewUrl = `${API_BASE}/api/courses/${slug}/certificate/preview`;
@@ -134,8 +134,8 @@ export default function CourseDetailPage() {
                 ? <Link key={q.id} className="tile" to={`/courses/${slug}/result`}><span className="tile-ico">{cert.final_result.state === "pending" ? "⏳" : "✅"}</span><span><strong>{q.title}</strong><small>{cert.final_result.state === "pending" ? "Submitted. Waiting for the admin to release your result" : "Result released. Tap to see it"}</small></span><span className="go">›</span></Link>
               : quizCard(q, "🏁"))}</>)}
 
-          {enrolled && cert?.project_required !== false && (<><h2>Your project</h2>
-            <p className="muted">Submit a project. The admin checks it before your certificate is released.</p>
+          {enrolled && (<><h2>Optional project</h2>
+            <p className="muted">Build and submit a project for practice. Projects are optional and do not affect course completion or certificate eligibility.</p>
             <ProjectSubmit slug={slug} onChange={refresh} /></>)}
 
           <h2>Certificate</h2>
@@ -147,7 +147,7 @@ export default function CourseDetailPage() {
             <ol className="steps" aria-label="Steps to the certificate">
               {steps.map(([label, ok]) => <li key={label} className={ok ? "ok" : ""}><span>{ok ? "✓" : "•"}</span>{label}</li>)}
             </ol>
-            {!enrolled || !cert ? <p>This is a sample. Complete every lesson, pass the tests and the final exam{cert?.is_free || course.is_free ? " and submit your project" : <>, then pay{shownPrice !== null ? ` ₹${shownPrice}` : ""}</>} to unlock your own certificate.</p>
+            {!enrolled || !cert ? <p>This is a sample. Complete every lesson and pass the final exam{cert?.is_free || course.is_free ? "" : <>, then pay{shownPrice !== null ? ` ₹${shownPrice}` : ""}</>} to unlock your own certificate. Projects are optional.</p>
               : cert.issued ? (<>
                 <p><strong>🏅 Your certificate is ready.</strong></p>
                 <div className="row">
@@ -155,12 +155,11 @@ export default function CourseDetailPage() {
                   <button className="ghost" onClick={() => openCertificate(cert.certificate_id!, "png").catch(e => setNote(errText(e)))}>Download image</button>
                 </div></>)
               : !cert.course_completed ? <p>{finalOpen ? "Take the final exam. The admin releases your result, then you can continue to payment." : cert.locked_reason}</p>
-              : cert.project_required && !cert.project_approved ? <p>{cert.locked_reason}</p>
-              : cert.awaiting_admin ? <p><strong>✅ {cert.is_free ? "Project approved." : "Payment received."}</strong> The admin will unlock your certificate shortly. You will find it here and in your dashboard.</p>
+              : cert.awaiting_admin ? <p><strong>✅ {cert.is_free ? "Course completed." : "Payment received."}</strong> The admin will unlock your certificate shortly. You will find it here and in your dashboard.</p>
               : cert.is_free ? (<><p>This course is free. Open the next screen to get your certificate.</p>
                   <Link className="solid big wide" to={`/courses/${slug}/pay`}>Get my certificate</Link></>)
               : !cert.can_pay ? <p>You finished the course. Online payment is not available right now, so the certificate cannot be bought at the moment.</p>
-              : (<><p>Your project is approved. Pay ₹{cert.price_inr} to unlock your certificate.</p>
+              : (<><p>Your course is complete. Pay ₹{cert.price_inr} to unlock your certificate.</p>
                   <Link className="solid big wide" to={`/courses/${slug}/pay`}>Pay now ₹{cert.price_inr}</Link></>)}
             {note && <p role="status">{note}</p>}
           </div>

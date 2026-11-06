@@ -96,8 +96,6 @@ def upi_order(slug: str, user: User = Depends(get_current_user), db: Session = D
         raise HTTPException(status_code=409, detail="This course is free. No payment is needed.")
     if not completion(db, user.id, course)["completed"]:
         raise HTTPException(status_code=403, detail="Finish every lesson and pass the final exam before paying for the certificate.")
-    if not certificates.project_ok(db, user.id, course.id):
-        raise HTTPException(status_code=403, detail="Submit your project and wait for the admin to approve it before paying for the certificate.")
     if certificates.has_verified_payment(db, user.id, course.id):
         raise HTTPException(status_code=409, detail="You have already paid for this certificate.")
     pay = db.scalar(select(Payment).where(Payment.user_id == user.id, Payment.course_id == course.id, Payment.gateway == "upi_manual",

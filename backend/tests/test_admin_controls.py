@@ -40,7 +40,6 @@ def test_admin_release_mode_paid_student_waits_for_admin_unlock(razorpay, outbox
     a.patch("/api/admin/settings", json={"certificate_release": "admin"})
     c = student("pay@example.com", "Payer", enroll="html5")
     complete_course(c, "html5")
-    approve_project(c, "html5", a)
     _, r = pay_for(c)
     assert r.json()["paid"] is True and r.json()["issued"] is False
     st = c.get("/api/courses/html5/certificate").json()
@@ -56,9 +55,10 @@ def test_admin_release_mode_paid_student_waits_for_admin_unlock(razorpay, outbox
     assert a.get("/api/admin/certificate-requests").json()["items"] == []
 
 
-def test_admin_can_unlock_without_payment_but_not_before_completion(razorpay):
+def test_admin_cannot_unlock_a_paid_certificate_without_verified_payment(razorpay):
     seed_all()
     a = admin()
+    a.patch("/api/admin/settings", json={"certificate_release": "admin"})
     c = student("free@example.com", enroll="html5")
     uid = c.get("/api/auth/me").json()["id"]
     cid = a.get("/api/admin/courses").json()["items"]
@@ -66,7 +66,10 @@ def test_admin_can_unlock_without_payment_but_not_before_completion(razorpay):
     assert a.post("/api/admin/certificate-unlock", json={"user_id": uid, "course_id": html}).status_code == 409
     complete_course(c, "html5")
     assert c.get("/api/courses/html5/certificate").json()["issued"] is False
-    approve_project(c, "html5", a)
+    assert c.get("/api/courses/html5/certificate").json()["project_required"] is False
+    assert a.post("/api/admin/certificate-unlock", json={"user_id": uid, "course_id": html}).status_code == 409
+    _, payment = pay_for(c)
+    assert payment.json()["paid"] is True and payment.json()["issued"] is False
     r = a.post("/api/admin/certificate-unlock", json={"user_id": uid, "course_id": html}).json()
     assert r["certificate_id"] and r["emailed"] is False
     assert c.get("/api/courses/html5/certificate").json()["issued"] is True

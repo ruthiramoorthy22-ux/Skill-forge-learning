@@ -6,7 +6,7 @@ const release = process.env.CAP_RELEASE === "1";
 
 const config: CapacitorConfig = {
   appId: "com.skillforge.learning",
-  appName: "Skill Learning",
+  appName: "Skill Forge Learning",
   webDir: "dist",
   server: { androidScheme: release ? "https" : "http", cleartext: !release },
 };

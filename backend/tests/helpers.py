@@ -96,7 +96,7 @@ PROJECT = {"title": "Pocket Calculator", "description": "A small calculator that
 
 
 def approve_project(c, slug, a=None, release=False):
-    """The student submits a project and the admin approves it (needed before a certificate)."""
+    """The student submits an optional practice project and the admin reviews it."""
     assert c.put(f"/api/courses/{slug}/project", json=PROJECT).status_code == 200
     a = a or admin()
     sid = next(s["id"] for s in a.get("/api/admin/project-submissions?status=submitted").json()["items"]

@@ -25,6 +25,6 @@ export function useAvatar(): string {
 
 /** Round picture, or the initials when the student has not added one. */
 export default function Avatar({ name, src, className = "" }: { name: string; src?: string; className?: string }) {
-  const initials = name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase() || "SL";
+  const initials = name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase() || "SF";
   return <span className={`avatar ${className}`} aria-hidden="true">{src ? <img src={src} alt="" /> : initials}</span>;
 }

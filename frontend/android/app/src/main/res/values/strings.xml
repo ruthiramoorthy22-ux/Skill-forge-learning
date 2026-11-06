@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Skill Learning</string>
-    <string name="title_activity_main">Skill Learning</string>
+    <string name="app_name">Skill Forge Learning</string>
+    <string name="title_activity_main">Skill Forge Learning</string>
     <string name="package_name">com.skillforge.learning</string>
     <string name="custom_url_scheme">com.skillforge.learning</string>
 </resources>

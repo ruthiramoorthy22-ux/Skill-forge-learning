@@ -9,11 +9,11 @@ class Settings:
         self.database_url = os.getenv("DATABASE_URL", "sqlite:///./skillforge.db")
         self.admin_email = os.getenv("ADMIN_EMAIL", "skillforgelearning22@gmail.com").strip().lower()
         self.session_hours = int(os.getenv("SESSION_HOURS", "8"))
-        self.cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost,capacitor://localhost").split(",") if o.strip()]
+        self.cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS",  "http://localhost:5173,http://localhost,capacitor://localhost,https://skillforge-learning-2026.web.app").split(",") if o.strip()]
         self.razorpay_key_id = os.getenv("RAZORPAY_KEY_ID", "").strip()
         self.razorpay_key_secret = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
         self.razorpay_webhook_secret = os.getenv("RAZORPAY_WEBHOOK_SECRET", "").strip()
-        self.brand_name = os.getenv("BRAND_NAME", "SkillForge AI").strip() or "SkillForge AI"  # shown in the Razorpay checkout
+        self.brand_name = os.getenv("BRAND_NAME", "Skill Forge Learning").strip() or "Skill Forge Learning"  # shown in the Razorpay checkout
         self.certificate_price_inr = int(os.getenv("CERTIFICATE_PRICE_INR", "55"))
         self.final_unlock_rule = os.getenv("FINAL_UNLOCK_RULE", "attempted")  # attempted | passed
         self.smtp_host = os.getenv("SMTP_HOST", "").strip()

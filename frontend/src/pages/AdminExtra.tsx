@@ -41,9 +41,9 @@ export function SettingsTab() {
         <p className="muted">You always get a notification when a student pays. In both modes you can unlock a certificate yourself and email it.</p>
       </div>
       <div className="card" style={{ maxWidth: 520, marginTop: 16 }}>
-        <h3>Project before certificate</h3>
-        <label className="opt"><input type="checkbox" checked={data?.project_required !== false} onChange={e => save({ project_required: e.target.checked }, e.target.checked ? "Students must submit a project and you must approve it." : "The project is no longer required for a certificate.")} /> Students must submit a project and get it approved</label>
-        <p className="muted">When on, a student pays only after you approve the project, and the project name is printed on the certificate.</p>
+        <h3>Legacy project setting</h3>
+        <label className="opt"><input type="checkbox" checked={data?.project_required !== false} onChange={e => save({ project_required: e.target.checked }, "Legacy project setting saved. Projects remain optional for every student.")} /> Legacy project requirement setting</label>
+        <p className="muted">Projects are optional and never block course completion, certificate payment or eligibility. This setting is retained for compatibility with existing configuration.</p>
       </div>
       <PaymentMethodsCard />
       {msg && <p role="status">{msg}</p>}
@@ -136,7 +136,7 @@ export function CertificateRequests({ onChange }: { onChange: () => void }) {
       {msg && <p role="status">{msg}</p>}
       {data && data.items.length === 0 && <p>Nobody is waiting.</p>}
       {data && data.items.length > 0 && (
-        <div className="scroll"><table><thead><tr><th>Student</th><th>Email</th><th>Course</th><th>Project</th><th>Paid</th><th></th></tr></thead>
+        <div className="scroll"><table><thead><tr><th>Student</th><th>Email</th><th>Course</th><th>Optional project</th><th>Paid</th><th></th></tr></thead>
           <tbody>{data.items.map((r: Obj) => (
             <tr key={`${r.user_id}-${r.course_id}`}><td>{r.student}</td><td>{r.email}</td><td>{r.course}</td><td>{r.project_approved ? "Approved" : "Not approved"}</td><td>{r.paid ? "Yes" : "No"}</td>
               <td><button className="solid" onClick={() => unlock(r, false)}>Unlock</button>{" "}

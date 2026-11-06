@@ -1,4 +1,4 @@
-"""Catalog data for SkillForge Learning (Phase 1).
+"""Catalog data for Skill Forge Learning (Phase 1).
 
 Phase 1 serves the catalog from this module. Phase 2 moves it into PostgreSQL.
 Levels are PROVISIONAL: each category's topics are split into thirds by their

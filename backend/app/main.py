@@ -79,7 +79,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Skill Learning API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Skill Forge Learning API", version="1.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=True,
                    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"], allow_headers=["Content-Type", "Authorization", "X-Client"])
 app.include_router(auth_router)

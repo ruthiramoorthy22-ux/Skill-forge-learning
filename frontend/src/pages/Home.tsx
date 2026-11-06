@@ -7,7 +7,7 @@ export default function Home() {
         <div>
           <h1>Learn programming one working program at a time.</h1>
           <p className="lead">
-            Skill Learning is a coding platform for beginners through interview candidates, covering languages,
+            Skill Forge Learning is a coding platform for beginners through interview candidates, covering languages,
             web, data, AI, cloud and security. It is being built in phases, and this site shows exactly what exists today.
           </p>
           <div className="row">

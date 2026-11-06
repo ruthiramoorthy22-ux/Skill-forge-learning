@@ -63,9 +63,10 @@ def certificate_requests(_: User = Depends(require_admin), db: Session = Depends
                                         .join(Course, Course.id == Enrollment.course_id).order_by(Enrollment.id.desc())).all():
         if certificates.get_certificate(db, user.id, course.id) or not completion(db, user.id, course)["completed"]:
             continue
+        submission = certificates.get_submission(db, user.id, course.id)
         items.append({"user_id": user.id, "student": user.display_name, "email": user.email, "course_id": course.id,
                       "course": course.title, "paid": certificates.has_verified_payment(db, user.id, course.id),
-                      "project_approved": certificates.project_ok(db, user.id, course.id)})
+                      "project_approved": submission is not None and submission.status == "approved"})
     return {"items": items, "release_mode": app_settings.get_release_mode(db), "email_configured": mailer.configured()}
 
 
@@ -83,8 +84,8 @@ def unlock_certificate(body: UnlockIn, admin: User = Depends(require_admin), db:
         raise HTTPException(status_code=404, detail="Student or course not found")
     if not completion(db, student.id, course)["completed"]:
         raise HTTPException(status_code=409, detail="This student has not completed the course yet.")
-    if not certificates.project_ok(db, student.id, course.id):
-        raise HTTPException(status_code=409, detail="Review and approve this student's project first (Admin > Submissions), or turn the project requirement off in Settings.")
+    if not certificates.payment_ok(db, student.id, course):
+        raise HTTPException(status_code=409, detail="A verified certificate payment is required before unlocking this certificate.")
     if not certificates.has_grant(db, student.id, course.id):
         db.add(CertificateGrant(user_id=student.id, course_id=course.id, admin_id=admin.id, note=body.note))
         db.flush()
@@ -96,9 +97,9 @@ def unlock_certificate(body: UnlockIn, admin: User = Depends(require_admin), db:
     if body.send_email and cert is not None:
         try:
             img, base = certificates.render_for(db, cert)
-            mailer.send_mail(student.email, f"Your SkillForge Learning certificate: {course.title}",
+            mailer.send_mail(student.email, f"Your Skill Forge Learning certificate: {course.title}",
                              f"Hello {student.display_name},\n\nCongratulations on completing {course.title}. "
-                             f"Your certificate is attached and also available in your account.\n\nSkillForge Learning",
+                             f"Your certificate is attached and also available in your account.\n\nSkill Forge Learning",
                              [(f"{base}.pdf", to_pdf(img), "application/pdf")])
             emailed = True
         except mailer.MailUnavailable as e:
@@ -378,13 +379,13 @@ def review_submission(submission_id: int, body: ReviewIn, admin: User = Depends(
         try:
             if cert is not None:
                 img, base = certificates.render_for(db, cert)
-                mailer.send_mail(student.email, f"Your SkillForge Learning certificate: {course.title}",
-                                 f"Hello {student.display_name},\n\nYour project \"{s.title}\" was approved. Your certificate is attached and also in your account.\n\nSkillForge Learning",
+                mailer.send_mail(student.email, f"Your Skill Forge Learning certificate: {course.title}",
+                                 f"Hello {student.display_name},\n\nYour project \"{s.title}\" was approved. Your certificate is attached and also in your account.\n\nSkill Forge Learning",
                                  [(f"{base}.pdf", to_pdf(img), "application/pdf")])
             else:
                 msg = ("approved. You can now pay for and receive your certificate in your account." if body.decision == "approved"
                        else "reviewed. Please change the following and submit it again:\n\n" + s.admin_feedback)
-                mailer.send_mail(student.email, f"Your project review: {s.title}", f"Hello {student.display_name},\n\nYour project \"{s.title}\" was {msg}\n\nSkillForge Learning")
+                mailer.send_mail(student.email, f"Your project review: {s.title}", f"Hello {student.display_name},\n\nYour project \"{s.title}\" was {msg}\n\nSkill Forge Learning")
             emailed = True
         except mailer.MailUnavailable as e:
             email_error = str(e)

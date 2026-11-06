@@ -23,23 +23,22 @@ def test_project_needs_a_finished_course_and_valid_fields():
     assert student("other@example.com").put("/api/courses/html5/project", json=PROJECT).status_code == 403   # not enrolled
 
 
-def test_submission_notifies_admin_and_gates_payment_and_certificate(razorpay, outbox):
+def test_submission_is_optional_and_never_gates_payment_or_certificate(razorpay, outbox):
     seed_all()
     a, c = admin(), student("p2@example.com", "Pri", enroll="html5")
     complete_course(c, "html5")
     st = c.get("/api/courses/html5/certificate").json()
-    assert st["project_required"] and not st["project_approved"] and "Submit your project" in st["locked_reason"]
-    assert c.post("/api/courses/html5/certificate/order").status_code == 403          # cannot pay before approval
+    assert st["project_required"] is False and not st["project_approved"] and "Pay" in st["locked_reason"]
+    assert c.post("/api/courses/html5/certificate/order").status_code == 200
     sub = c.put("/api/courses/html5/project", json=PROJECT).json()["submission"]
     assert sub["status"] == "submitted"
-    assert "waiting for the admin" in c.get("/api/courses/html5/certificate").json()["locked_reason"]
+    assert "Pay" in c.get("/api/courses/html5/certificate").json()["locked_reason"]
     assert any(n["kind"] == "project_submitted" and "Pocket Calculator" in n["message"] for n in a.get("/api/admin/notifications").json()["items"])
     row = a.get("/api/admin/project-submissions?status=submitted").json()["items"][0]
     assert row["student"] == "Pri" and row["course"] and row["repo_url"] == PROJECT["repo_url"] and row["paid"] is False
-    # unlock is refused while the project is not approved
+    # An admin cannot unlock a paid certificate before its payment is verified.
     r = a.post("/api/admin/certificate-unlock", json={"user_id": row["user_id"], "course_id": row["course_id"]})
-    assert r.status_code == 409 and "approve" in r.json()["detail"]
-    # approve, then pay -> certificate issued (auto mode)
+    assert r.status_code == 409 and "verified certificate payment" in r.json()["detail"]
     assert a.patch(f"/api/admin/project-submissions/{row['id']}/review", json={"decision": "approved"}).json()["status"] == "approved"
     assert c.get("/api/courses/html5/certificate").json()["project_approved"] is True
     _, paid = pay_for(c)
@@ -47,7 +46,7 @@ def test_submission_notifies_admin_and_gates_payment_and_certificate(razorpay, o
     assert c.put("/api/courses/html5/project", json=PROJECT).status_code == 409        # approved projects are final
 
 
-def test_changes_requested_then_resubmit_then_release_without_payment():
+def test_changes_requested_then_resubmit_and_project_release_still_requires_payment(razorpay):
     seed_all()
     a, c = admin(), student("p3@example.com", enroll="css3")
     complete_course(c, "css3")
@@ -61,31 +60,35 @@ def test_changes_requested_then_resubmit_then_release_without_payment():
     again = c.put("/api/courses/css3/project", json={**PROJECT, "title": "Calculator v2"}).json()["submission"]
     assert again["status"] == "submitted" and again["admin_feedback"] == "" and again["id"] == sid   # same row, resubmitted
     out = a.patch(f"/api/admin/project-submissions/{sid}/review", json={"decision": "approved", "release": True}).json()
-    assert out["certificate_id"] and out["certificate_issued"] is True
+    assert out["certificate_id"] is None and out["certificate_issued"] is False
+    _, paid = pay_for(c, "css3")
+    assert paid.json()["issued"] is True
     assert c.get("/api/courses/css3/certificate").json()["issued"] is True
 
 
-def test_certificate_never_prints_the_project_name():
+def test_certificate_uses_the_uploaded_logo_and_never_prints_the_project_name(razorpay):
     plain = render_certificate("Asha K", "HTML5", date(2026, 11, 1), "ID1")
     again = render_certificate("Asha K", "HTML5", date(2026, 11, 1), "ID1")
     assert ImageChops.difference(plain.convert("RGB"), again.convert("RGB")).getbbox() is None
     seed_all()
-    a, c = admin(), student("p4@example.com", "Asha K", enroll="html5")
+    c = student("p4@example.com", "Asha K", enroll="html5")
     complete_course(c, "html5")
-    approve_project(c, "html5", a, release=True)
-    cid = c.get("/api/courses/html5/certificate").json()["certificate_id"]
+    _, paid = pay_for(c)
+    assert paid.json()["issued"] is True
+    cid = paid.json()["certificate_id"]
     png = c.get(f"/api/certificates/{cid}/download?format=png")
     assert png.status_code == 200 and Image.open(BytesIO(png.content)).size == plain.size
 
 
-def test_project_requirement_can_be_switched_off():
+def test_project_requirement_can_be_switched_off(razorpay):
     seed_all()
     a, c = admin(), student("p5@example.com", enroll="html5")
     complete_course(c, "html5")
     a.patch("/api/admin/settings", json={"project_required": False})
     assert a.get("/api/admin/settings").json()["project_required"] is False
-    uid, cid = c.get("/api/auth/me").json()["id"], next(x["id"] for x in a.get("/api/admin/courses").json()["items"] if x["slug"] == "html5")
-    assert a.post("/api/admin/certificate-unlock", json={"user_id": uid, "course_id": cid}).json()["certificate_id"]
+    assert c.get("/api/courses/html5/certificate").json()["project_required"] is False
+    _, paid = pay_for(c)
+    assert paid.json()["issued"] is True
 
 
 def test_student_profile_saves_and_validates():
@@ -106,11 +109,11 @@ def test_student_profile_saves_and_validates():
     assert TestClient(app, base_url="https://testserver").get("/api/me/profile").status_code == 401
 
 
-def test_name_locks_after_certificate_but_admin_can_edit_everything():
+def test_name_locks_after_certificate_but_admin_can_edit_everything(razorpay):
     seed_all()
     a, c = admin(), student("p7@example.com", "Meena", enroll="html5")
     complete_course(c, "html5")
-    approve_project(c, "html5", a, release=True)
+    pay_for(c)
     assert c.put("/api/me/profile", json={"display_name": "Meena Devi"}).status_code == 409
     uid = c.get("/api/auth/me").json()["id"]
     edit = {"display_name": "Meena Devi", "email": "meena.new@example.com", "phone": "9876543210", "college_name": "CIT",

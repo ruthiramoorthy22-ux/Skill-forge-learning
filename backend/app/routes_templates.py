@@ -1,6 +1,6 @@
 """Admin: upload a certificate design, place the name / course / date on it, preview it with sample data, and switch it on.
 Every certificate (download, email, sample on the course page) is drawn on the active design. With no active design the
-built-in SkillForge Learning design is used."""
+built-in Skill Forge Learning design is used."""
 import base64
 import io
 from datetime import date

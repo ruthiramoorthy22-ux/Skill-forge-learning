@@ -1,6 +1,11 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { api, http, User } from "./api";
+import BrandLogo from "./components/BrandLogo";
+
+function Loading() {
+  return <section className="page brand-loading"><BrandLogo /><p aria-live="polite">Loading Skill Forge Learning…</p></section>;
+}
 
 interface AuthValue {
   user: User | null;
@@ -32,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 /** UI convenience only. The server enforces access on every API call. */
 export function RequireAuth({ admin, children }: { admin?: boolean; children: ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <section className="page"><p aria-live="polite">Loading…</p></section>;
+  if (loading) return <Loading />;
   if (!user) return <Navigate to={admin ? "/admin/login" : "/signin"} replace />;
   if (admin && user.role !== "admin") {
     return <section className="page"><h1>Not authorized</h1><p>This account does not have administrator access.</p></section>;

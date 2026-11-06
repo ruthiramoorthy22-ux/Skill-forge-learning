@@ -61,7 +61,7 @@ export function CertificateDesigner() {
     try { await http(`/admin/certificate-templates/${t.id}/activate`, { method: "POST" }); setMsg(`"${t.name}" is now used for every certificate.`); load(); } catch (e) { setErr(errText(e)); }
   }
   async function builtin() {
-    try { await http("/admin/certificate-templates/use-builtin", { method: "POST" }); setMsg("The built-in SkillForge design is used again."); load(); } catch (e) { setErr(errText(e)); }
+    try { await http("/admin/certificate-templates/use-builtin", { method: "POST" }); setMsg("The built-in Skill Forge Learning design is used again."); load(); } catch (e) { setErr(errText(e)); }
   }
   async function remove(t: Obj) {
     if (!window.confirm(`Delete the design "${t.name}"?`)) return;
@@ -77,7 +77,7 @@ export function CertificateDesigner() {
       {msg && <p role="status">{msg}</p>}
       {data && (
         <div className="scroll"><table><thead><tr><th>Design</th><th>Size</th><th>Status</th><th></th></tr></thead><tbody>
-          <tr><td>Built-in SkillForge Learning design</td><td>1344 x 896</td><td>{data.builtin.active ? "✅ In use" : "-"}</td>
+          <tr><td>Built-in Skill Forge Learning design</td><td>1344 x 896</td><td>{data.builtin.active ? "✅ In use" : "-"}</td>
             <td>{!data.builtin.active && <button className="ghost" onClick={builtin}>Use this design</button>}</td></tr>
           {data.items.map((t: Obj) => (
             <tr key={t.id}><td>{t.name}</td><td>{t.width} x {t.height}</td><td>{t.active ? "✅ In use" : "-"}</td>

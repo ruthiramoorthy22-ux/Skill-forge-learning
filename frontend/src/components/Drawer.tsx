@@ -25,14 +25,14 @@ export function DrawerProvider({ children, dark, toggleTheme }: { children: Reac
       <aside className={`drawer ${isOpen ? "show" : ""}`} aria-label="Menu" aria-hidden={!isOpen}>
         <div className="drawer-head">
           <Avatar name={user?.display_name ?? ""} src={user?.role === "admin" ? "" : pic} />
-          <div><strong>{user?.display_name ?? "Skill Learning"}</strong><small>{user?.email ?? "Welcome"}</small></div>
+          <div><strong>{user?.display_name ?? "Skill Forge Learning"}</strong><small>{user?.email ?? "Welcome"}</small></div>
         </div>
         <nav>
           {items.map(([to, icon, label]) => <Link key={to} to={to} onClick={() => setOpen(false)}><span aria-hidden="true">{icon}</span>{label}</Link>)}
           <button onClick={toggleTheme}><span aria-hidden="true">{dark ? "☀️" : "🌙"}</span>{dark ? "Light mode" : "Dark mode"}</button>
           {user && <button className="danger" onClick={() => { setOpen(false); signOut(); }}><span aria-hidden="true">🚪</span>Sign out</button>}
         </nav>
-        <small className="drawer-foot">Skill Learning</small>
+        <small className="drawer-foot">Skill Forge Learning</small>
       </aside>
     </Ctx.Provider>
   );

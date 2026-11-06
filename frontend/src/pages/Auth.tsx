@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import Illustration from "../components/Illustration";
+import BrandLogo from "../components/BrandLogo";
 
 type Mode = "signin" | "register" | "admin";
 const TITLES: Record<Mode, string> = { signin: "Sign In", register: "Create account", admin: "Administrator sign in" };
@@ -34,10 +35,10 @@ function AuthForm({ mode }: { mode: Mode }) {
   return (
     <div className="auth-screen">
       <div className="auth-top">
-        <span className="auth-logo" aria-hidden="true">SL</span>
+        <div className="auth-brand"><BrandLogo className="auth-logo" /><strong>Skill Forge Learning</strong></div>
         <div className="auth-copy">
           {mode === "register" ? (<><p>Hello!</p><h1>Create your account and start learning</h1></>)
-            : mode === "admin" ? (<><p>Admin</p><h1>Manage Skill Learning</h1></>)
+            : mode === "admin" ? (<><p>Admin</p><h1>Manage Skill Forge Learning</h1></>)
             : (<><p>Welcome Back!</p><h1>Let&apos;s continue your learning journey</h1></>)}
         </div>
         <Illustration variant="girl" />

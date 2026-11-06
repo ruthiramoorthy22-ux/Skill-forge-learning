@@ -52,11 +52,11 @@ def test_each_course_has_its_own_price_or_is_free(razorpay):
     listed = next(i for i in c.get("/api/courses?page_size=100").json()["items"] if i["slug"] == "html5")
     assert listed["price_inr"] == 199
     order = c.post("/api/courses/html5/certificate/order").json()
-    assert order["amount"] == 19900 and order["brand"] == "SkillForge AI"
+    assert order["amount"] == 19900 and order["brand"] == "Skill Forge Learning"
     assert c.get("/api/courses/html5/certificate").json()["price_inr"] == 199
 
 
-def test_free_course_needs_no_payment_and_certificate_follows_the_project(razorpay):
+def test_free_course_needs_no_payment_and_project_is_optional(razorpay):
     seed_all()
     c = student(enroll="html5")
     a = admin()
@@ -64,6 +64,7 @@ def test_free_course_needs_no_payment_and_certificate_follows_the_project(razorp
     assert a.patch(f"/api/admin/courses/{cid}", json={"is_paid": False}).status_code == 200
     assert c.get("/api/courses/html5").json()["is_free"] is True and c.get("/api/courses/html5").json()["price_inr"] == 0
     complete_course(c, "html5")
+    assert c.get("/api/courses/html5/certificate").json()["issued"] is True
     approve_project(c, "html5", a)
     st = c.get("/api/courses/html5/certificate").json()
     assert st["is_free"] and st["issued"] is True                       # no payment was ever made

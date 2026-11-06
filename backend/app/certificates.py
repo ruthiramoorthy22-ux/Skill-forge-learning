@@ -58,27 +58,20 @@ def get_submission(db: Session, user_id: str, course_id: int) -> Optional[Projec
     return db.scalar(select(ProjectSubmission).where(ProjectSubmission.user_id == user_id, ProjectSubmission.course_id == course_id))
 
 
-def project_ok(db: Session, user_id: str, course_id: int) -> bool:
-    """True when no project is required, or the admin approved the student's project."""
-    if not app_settings.get_project_required(db):
-        return True
-    sub = get_submission(db, user_id, course_id)
-    return sub is not None and sub.status == "approved"
-
-
 def has_grant(db: Session, user_id: str, course_id: int) -> bool:
     return db.scalar(select(CertificateGrant.id).where(CertificateGrant.user_id == user_id,
                                                        CertificateGrant.course_id == course_id).limit(1)) is not None
 
 
 def issue_if_eligible(db: Session, user_id: str, course: Course) -> Optional[Certificate]:
-    """Needs a completed course AND (an admin unlock OR a verified payment while the release mode is 'auto')."""
+    """Issue only after course completion and the required payment has been verified."""
     cert = get_certificate(db, user_id, course.id)
     if cert:
         return cert
-    released = has_grant(db, user_id, course.id) or (
-        app_settings.get_release_mode(db) == "auto" and payment_ok(db, user_id, course))
-    if not released or not completion(db, user_id, course)["completed"] or not project_ok(db, user_id, course.id):
+    if not payment_ok(db, user_id, course) or not completion(db, user_id, course)["completed"]:
+        return None
+    released = has_grant(db, user_id, course.id) or app_settings.get_release_mode(db) == "auto"
+    if not released:
         return None
     cert = Certificate(user_id=user_id, course_id=course.id)
     db.add(cert)
@@ -108,7 +101,7 @@ def finalize_payment(db: Session, payment: Payment, payment_id: str, method: str
     db.commit()
     if note is not None:
         try:
-            mailer.send_mail(settings.admin_email, "SkillForge Learning: certificate payment received", note.message)
+            mailer.send_mail(settings.admin_email, "Skill Forge Learning: certificate payment received", note.message)
             note.emailed = True
             db.commit()
         except mailer.MailUnavailable:
@@ -120,4 +113,4 @@ def render_for(db: Session, cert: Certificate):
     user, course = db.get(User, cert.user_id), db.get(Course, cert.course_id)
     img = render_certificate(user.display_name, course.title, completed_on(db, user.id, course).date(), cert.id,
                              template=active_template(db))
-    return img, f"SkillForge-{course.slug}-certificate"
+    return img, f"Skill-Forge-Learning-{course.slug}-certificate"

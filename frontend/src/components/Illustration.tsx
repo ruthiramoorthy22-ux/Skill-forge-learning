@@ -1,6 +1,6 @@
 /** Friendly student illustration drawn in SVG (no image files needed). */
 export default function Illustration({ variant = "girl" }: { variant?: "girl" | "boy" }) {
-  const hoodie = variant === "girl" ? "#c9a7f0" : "#3b82f6";
+  const hoodie = variant === "girl" ? "#f08a24" : "#0f766e";
   const hair = variant === "girl" ? "#3b2417" : "#1f2937";
   return (
     <svg className="illus" viewBox="0 0 220 240" role="img" aria-label="Student with a backpack and books">

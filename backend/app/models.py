@@ -324,7 +324,7 @@ class StudentProfile(Base):
 
 
 class ProjectSubmission(Base):
-    """The project a student submits for a course. The admin reviews it before a certificate can be released."""
+    """Optional student project submission for practice and admin feedback."""
     __tablename__ = "project_submissions"
     __table_args__ = (UniqueConstraint("user_id", "course_id", name="uq_project_submission"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

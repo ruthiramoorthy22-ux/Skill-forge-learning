@@ -1,4 +1,4 @@
-"""Renders the course certificate. The design is a template image (the built-in SkillForge Learning design, or one the
+"""Renders the course certificate. The design is a template image (the built-in Skill Forge Learning design, or one the
 admin uploaded). Only four things are drawn on it: the student name, the course title, the date and the certificate id.
 Where each text goes (position, size, colour, font) is a small config stored with the template, so any uploaded design
 works. Positions are fractions of the image (0..1), so the config does not depend on the image resolution."""

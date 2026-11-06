@@ -42,7 +42,7 @@ def set_release_mode(db: Session, mode: str) -> None:
     _set(db, RELEASE_KEY, "admin" if mode == "admin" else "auto")
 
 
-PROJECT_KEY = "project_required"  # 1: a student needs an approved project before the certificate (default: on)
+PROJECT_KEY = "project_required"  # Legacy setting retained for compatibility; projects are always optional.
 
 
 def get_project_required(db: Session) -> bool:

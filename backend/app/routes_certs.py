@@ -41,16 +41,12 @@ def certificate_status(slug: str, user: User = Depends(get_current_user), db: Se
     paid = certificates.has_verified_payment(db, user.id, course.id)
     price = certificates.price_for(db, course)
     sub = certificates.get_submission(db, user.id, course.id)
-    needs_project = app_settings.get_project_required(db)
-    project_approved = certificates.project_ok(db, user.id, course.id)
-    awaiting_admin = bool(cert is None and completed and certificates.payment_ok(db, user.id, course) and project_approved and app_settings.get_release_mode(db) == "admin")
+    project_approved = sub is not None and sub.status == "approved"
+    awaiting_admin = bool(cert is None and completed and certificates.payment_ok(db, user.id, course) and app_settings.get_release_mode(db) == "admin")
     reason = None
     if cert is None:
         if not completed:
             reason = "Locked. Finish every lesson and the final exam, then wait for the admin to release your result."
-        elif not project_approved:
-            reason = ("Locked. Your project is waiting for the admin to review it." if sub is not None and sub.status == "submitted"
-                      else "Locked. Submit your project and get it approved by the admin.")
         elif awaiting_admin:
             reason = "Payment received. The admin will unlock your certificate shortly."
         else:
@@ -60,7 +56,7 @@ def certificate_status(slug: str, user: User = Depends(get_current_user), db: Se
     return {"price_inr": price, "is_free": price == 0, "can_pay": m["razorpay"]["enabled"] or m["upi"]["enabled"],
             "payments_configured": payments.configured(),
             "course_completed": completed, "paid": paid, "awaiting_admin": awaiting_admin,
-            "project_required": needs_project, "project_approved": project_approved,
+            "project_required": False, "project_approved": project_approved,
             "project_status": sub.status if sub else None, "issued": cert is not None,
             "certificate_id": cert.id if cert else None, "locked_reason": reason,
             "final_result": final_result(db, user.id, course)}
@@ -91,8 +87,6 @@ def certificate_order(slug: str, user: User = Depends(get_current_user), db: Ses
         raise HTTPException(status_code=409, detail="This course is free. No payment is needed.")
     if not completion(db, user.id, course)["completed"]:
         raise HTTPException(status_code=403, detail="Finish every lesson and pass the final exam before paying for the certificate.")
-    if not certificates.project_ok(db, user.id, course.id):
-        raise HTTPException(status_code=403, detail="Submit your project and wait for the admin to approve it before paying for the certificate.")
     if certificates.has_verified_payment(db, user.id, course.id):
         raise HTTPException(status_code=409, detail="You have already paid for this certificate.")
     if not app_settings.razorpay_enabled(db):

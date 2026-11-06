@@ -31,18 +31,6 @@ def client():
 
 
 @pytest.fixture(autouse=True)
-def _project_gate_off_for_payment_mechanics(request, monkeypatch):
-    """test_certificates.py tests payment/delivery mechanics, so the project requirement is switched off there.
-    test_admin_controls.py and test_project_flow.py run with the real requirement."""
-    from app import app_settings
-    # The project requirement is off by default now; those two modules still test it, so it is switched on there.
-    if request.module.__name__ in ("test_admin_controls", "test_project_flow") and request.node.name != "test_project_requirement_can_be_switched_off":
-        monkeypatch.setattr(app_settings, "get_project_required", lambda db: True)
-    elif request.module.__name__ == "test_certificates":
-        monkeypatch.setattr(app_settings, "get_project_required", lambda db: False)
-
-
-@pytest.fixture(autouse=True)
 def _gateway_capture_check_is_not_called(monkeypatch):
     """The real check asks api.razorpay.com whether the payment was captured; tests replace it (test_payments_v7.py tests it with a fake HTTP)."""
     from app import payments

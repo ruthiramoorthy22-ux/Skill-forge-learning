@@ -18,11 +18,11 @@ import { FinalResultPage, PayPage } from "./pages/ResultPay";
 import { PaymentFailed, PaymentHistoryPage, PaymentSuccess } from "./pages/Payments";
 import Notifications from "./pages/Notifications";
 import NotificationBell from "./components/NotificationBell";
-import Avatar, { useAvatar } from "./components/Avatar";
 import { DrawerProvider } from "./components/Drawer";
 import { RequireAuth, useAuth } from "./auth";
 import { isApp } from "./api";
 import BottomNav from "./components/BottomNav";
+import BrandLogo from "./components/BrandLogo";
 
 type Theme = "light" | "dark";
 
@@ -45,20 +45,19 @@ const appNav = [["/home", "Home"], ["/courses", "Courses"], ["/challenges", "Cha
 /** In the Android app the first screen is the sign-in page (or the dashboard when already signed in). */
 function AppEntry() {
   const { user, loading } = useAuth();
-  if (loading) return <section className="page"><p aria-live="polite">Loading…</p></section>;
+  if (loading) return <section className="page brand-loading"><BrandLogo /><p aria-live="polite">Loading Skill Forge Learning…</p></section>;
   return <Navigate to={user ? (user.role === "admin" ? "/admin" : "/home") : "/signin"} replace />;
 }
 
 export default function App() {
   const [theme, toggle] = useTheme();
   const { user, loading, signOut } = useAuth();
-  const pic = useAvatar();
   return (
     <DrawerProvider dark={theme === "dark"} toggleTheme={toggle}>
       <a className="skip" href="#main">Skip to content</a>
       <header className="bar">
-        <Link to="/" className="brand" aria-label="Skill Learning home">
-          <span className="mark" aria-hidden="true">SL</span> Skill Learning
+        <Link to="/" className="brand" aria-label="Skill Forge Learning home">
+          <BrandLogo /> Skill Forge Learning
         </Link>
         <nav aria-label="Main">
           {(isApp ? appNav : nav).map(([to, label]) => <NavLink key={to} to={to}>{label}</NavLink>)}
@@ -67,13 +66,13 @@ export default function App() {
           <button className="ghost" onClick={toggle} aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}>
             {theme === "light" ? "Dark" : "Light"}
           </button>
-          {!loading && user ? (
+          {!loading && user?.role === "admin" ? (
             <>
               <NotificationBell />
-              <Link className="ghost who" to={user.role === "admin" ? "/admin" : "/profile"}>{user.role !== "admin" && <Avatar name={user.display_name} src={pic} className="xs" />}{user.display_name}</Link>
+              <Link className="ghost who" to="/admin">{user.display_name}</Link>
               <button className="solid" onClick={signOut}>Sign out</button>
             </>
-          ) : !loading ? (
+          ) : !loading && !user ? (
             <>
               <Link className="ghost" to="/signin">Sign in</Link>
               <Link className="solid" to="/register">Register</Link>
@@ -117,7 +116,7 @@ export default function App() {
       </main>
       <BottomNav />
       <footer className="foot">
-        <span>Skill Learning</span>
+        <span>Skill Forge Learning</span>
         <Link to="/privacy">Privacy Policy</Link>
         <Link to="/terms">Terms of Service</Link>
         <Link to="/help">Help</Link>

@@ -1,4 +1,4 @@
-/* Skill Learning app look: sign-in screen, home screen, side drawer, 4-tab bottom bar, result and pay screens. */
+/* Skill Forge Learning app look: sign-in screen, home screen, side drawer, 4-tab bottom bar, result and pay screens. */
 :root { --grad-a: #dff1ff; --grad-b: #eaf7e8; }
 :root[data-theme="dark"] { --grad-a: #0f2742; --grad-b: #10291f; }
 
@@ -17,7 +17,8 @@ body.app .bottomnav { display: flex; }
 /* sign in / register */
 .auth-screen { min-height: 100vh; display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; background: linear-gradient(180deg, var(--grad-a), var(--grad-b) 60%, var(--paper)); }
 .auth-top { position: relative; padding: calc(24px + env(safe-area-inset-top)) 22px 0; min-height: 300px; }
-.auth-logo { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: #fde047; color: #1f2937; font: 800 1.1rem var(--font-head); box-shadow: var(--shadow); }
+.auth-brand { display: flex; align-items: center; gap: 12px; color: var(--navy); font: 700 1.05rem var(--font-head); }
+:root[data-theme="dark"] .auth-brand { color: var(--ink); }
 .auth-copy { position: relative; z-index: 1; max-width: 58%; margin-top: 26px; }
 .auth-copy p { margin: 0; color: var(--forge); font-weight: 700; font-size: 1.05rem; }
 .auth-copy h1 { font-size: 1.55rem; line-height: 1.2; margin: 6px 0 0; color: var(--navy); }
@@ -29,7 +30,7 @@ body.app .bottomnav { display: flex; }
 .field:focus-within { border-color: var(--forge); box-shadow: 0 0 0 3px color-mix(in srgb, var(--forge) 18%, transparent); }
 .field input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 14px 0; outline: none; box-shadow: none; }
 .eye { border: 0; background: transparent; font-size: 1.1rem; padding: 6px; cursor: pointer; }
-.auth-btn { border: 0; border-radius: 14px; padding: 15px; font: 700 1.05rem var(--font-body); color: #fff; cursor: pointer; background: linear-gradient(135deg, #3b82f6, #1d4ed8); box-shadow: 0 8px 18px rgba(29,78,216,.28); }
+.auth-btn { border: 0; border-radius: 14px; padding: 15px; font: 700 1.05rem var(--font-body); color: var(--forge-ink); cursor: pointer; background: linear-gradient(135deg, var(--forge), var(--good)); box-shadow: var(--shadow); }
 .auth-btn:disabled { opacity: .6; }
 .auth-alt { text-align: center; margin: 4px auto 0; } .auth-alt a { font-weight: 700; }
 
@@ -40,11 +41,11 @@ body.app .bottomnav { display: flex; }
 .icon-btn { width: 44px; height: 44px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font-size: 1.3rem; cursor: pointer; box-shadow: var(--shadow); }
 .who { flex: 1; min-width: 0; display: grid; line-height: 1.2; } .who small { color: var(--steel); } .who strong { font-size: 1.1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .avatar.sm { width: 44px; height: 44px; font-size: 1rem; text-decoration: none; }
-.hero-card { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; padding: 18px 8px 0 18px; border-radius: 22px; overflow: hidden; background: linear-gradient(135deg, #bfe3ff, #d9f2d4); color: #0b1b4d; box-shadow: var(--shadow); }
+.hero-card { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; padding: 18px 8px 0 18px; border-radius: 22px; overflow: hidden; background: linear-gradient(135deg, color-mix(in srgb, var(--forge) 18%, var(--surface)), color-mix(in srgb, var(--good) 14%, var(--surface))); color: var(--navy); box-shadow: var(--shadow); }
 :root[data-theme="dark"] .hero-card { background: linear-gradient(135deg, #17426b, #1c4a35); color: #e6edf7; }
 .hero-card h2 { margin: 0 0 6px; font-size: 1.15rem; } .hero-card p { margin: 0 0 14px; opacity: .8; font-size: .9rem; }
 .hero-card .illus { width: 130px; height: auto; flex: none; }
-.hero-btn { display: inline-block; padding: 9px 20px; border-radius: 99px; background: #1d4ed8; color: #fff; font-weight: 700; text-decoration: none; margin-bottom: 16px; }
+.hero-btn { display: inline-block; padding: 9px 20px; border-radius: 99px; background: var(--forge); color: var(--forge-ink); font-weight: 700; text-decoration: none; margin-bottom: 16px; }
 .quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .quick a { display: grid; justify-items: center; gap: 6px; padding: 14px 4px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); text-decoration: none; color: var(--ink); }
 .quick .qi { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; font-size: 1.4rem; background: color-mix(in srgb, var(--forge) 10%, transparent); }

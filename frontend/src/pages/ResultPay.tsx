@@ -2,10 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { API_BASE, errText, http, openCertificate } from "../api";
 import { loadRazorpay } from "../razorpay";
-import ProjectSubmit from "../components/ProjectSubmit";
 
 interface FR { state: "none" | "pending" | "released"; score_pct?: number; passed?: boolean; pass_mark?: number }
-interface Cert { price_inr: number; is_free?: boolean; can_pay?: boolean; payments_configured: boolean; course_completed: boolean; paid: boolean; awaiting_admin?: boolean; project_required?: boolean; project_approved?: boolean; issued: boolean; certificate_id: string | null; locked_reason: string | null }
+interface Cert { price_inr: number; is_free?: boolean; can_pay?: boolean; payments_configured: boolean; course_completed: boolean; paid: boolean; awaiting_admin?: boolean; issued: boolean; certificate_id: string | null; locked_reason: string | null }
 interface Order { order_id: string; amount: number; currency: string; key_id: string; course_title: string; student_name: string; student_email: string; brand: string }
 interface Methods { brand: string; razorpay: { enabled: boolean; mode: string; hide: string[]; methods: string[] }; upi: { enabled: boolean; upi_id: string; payee_name: string } }
 interface UpiOrder { payment_id: string; amount: number; upi_id: string; payee_name: string; uri: string }
@@ -78,7 +77,7 @@ export function PayPage() {
       const rzp = new window.Razorpay!({
         key: order.key_id, amount: order.amount, currency: order.currency, order_id: order.order_id,
         name: order.brand, description: `${order.course_title} certificate`,
-        prefill: { name: order.student_name, email: order.student_email }, theme: { color: "#1677d2" },
+        prefill: { name: order.student_name, email: order.student_email }, theme: { color: "#0b6b5e" },
         ...(hide.length ? { config: { display: { hide } } } : {}),
         handler: async (resp: Record<string, string>) => {
           done = true;
@@ -133,19 +132,15 @@ export function PayPage() {
         </div>
       ) : !cert.course_completed ? (
         <><p>{cert.locked_reason}</p><Link className="solid" to={`/courses/${slug}/result`}>See my result</Link></>
-      ) : cert.project_required && !cert.project_approved ? (
-        <><h2>Submit your project</h2>
-          <p className="muted">Submit your project. The admin checks it, then you can pay and get your certificate.</p>
-          <ProjectSubmit slug={slug} onChange={load} /></>
       ) : cert.awaiting_admin ? (
-        <p><strong>✅ {cert.is_free ? "Project approved." : "Payment received."}</strong> Your certificate will be released shortly.</p>
+        <p><strong>✅ {cert.is_free ? "Course completed." : "Payment received."}</strong> Your certificate will be released shortly.</p>
       ) : cert.is_free ? (
         <><p><strong>This course is free.</strong> No payment is needed.</p><button className="solid big wide" onClick={load}>Get my certificate</button></>
       ) : !canRzp && !canUpi ? (
         <p>Online payment is not available right now. Please try again later.</p>
       ) : (
         <>
-          <p>Your project is approved. Pay <strong>₹{cert.price_inr}</strong> once to get your certificate.</p>
+          <p>Your course is complete. Pay <strong>₹{cert.price_inr}</strong> once to get your certificate.</p>
           {canRzp && (
             <div className="pay-opt">
               <h3>Pay online</h3>

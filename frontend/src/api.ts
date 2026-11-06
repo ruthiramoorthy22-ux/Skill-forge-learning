@@ -49,7 +49,7 @@ async function request<T>(path: string, opts: { method?: string; body?: unknown 
   try {
     res = await fetch(`${API_BASE}/api${path}`, {
       method: opts.method ?? "GET", headers, body: opts.body ? JSON.stringify(opts.body) : undefined,
-      credentials: isApp ? "omit" : "same-origin",
+      credentials: isApp ? "omit" : "include",
     });
   } catch {
     throw new ApiError(0, isApp ? "Cannot reach the server. Check your internet connection and the server address." : "Cannot reach the server.");
