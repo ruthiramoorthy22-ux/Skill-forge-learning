@@ -40,6 +40,8 @@ class Course(Base):
     summary: Mapped[str] = mapped_column(Text, default="")
     objectives: Mapped[list] = mapped_column(JSON, default=list)
     est_minutes: Mapped[int] = mapped_column(Integer, default=0)
+    duration_value: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    duration_unit: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     published: Mapped[bool] = mapped_column(Boolean, default=True)
     status: Mapped[str] = mapped_column(String(20), default="planned", nullable=False)
     # Pricing: is_paid False = free (the certificate needs no payment). price_inr None = use the default price from Settings.

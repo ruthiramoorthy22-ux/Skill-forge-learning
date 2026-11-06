@@ -88,9 +88,10 @@ def course_detail(slug: str, db: Session = Depends(get_db)):
     lessons = _lessons(course)
     out = {**base, "lesson_count": len(lessons), "outline": None, **pricing_map(db).get(slug, {})}
     out["status"] = course.status
+    out.update(duration_value=course.duration_value, duration_unit=course.duration_unit,
+               est_minutes=course.est_minutes)
     if lessons:
         out.update(status=course.status, summary=course.summary, objectives=course.objectives,
-                   est_minutes=course.est_minutes,
                    outline=[{"title": m.title, "lessons": [{"slug": l.slug, "title": l.title} for l in m.lessons if l.published]}
                             for m in course.modules if any(l.published for l in m.lessons)])
     return out

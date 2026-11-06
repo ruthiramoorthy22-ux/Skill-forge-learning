@@ -2,6 +2,7 @@ export type Level = "beginner" | "intermediate" | "advanced";
 export interface Course {
   slug: string; title: string; category_id: string; category_name: string;
   level: Level; status: "planned" | "in_development" | "available"; lesson_count?: number;
+  duration_value?: number | null; duration_unit?: "days" | "months" | "hours" | null;
   is_free?: boolean; price_inr?: number;   // price_inr is 0 for a free course
 }
 export interface Category { id: string; name: string; course_count: number }

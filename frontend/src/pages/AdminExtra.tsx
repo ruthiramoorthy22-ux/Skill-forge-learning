@@ -149,14 +149,20 @@ export function CertificateRequests({ onChange }: { onChange: () => void }) {
 /** Edit the details of a course (title, level, category, summary, objectives, time). */
 export function CourseEditForm({ course, cats, onDone, onCancel }: { course: Obj; cats: Category[]; onDone: () => void; onCancel: () => void }) {
   const [f, setF] = useState({ title: course.title, category_id: course.category_id, level: course.level, summary: course.summary ?? "",
-    objectives: (course.objectives ?? []).join("\n"), est_minutes: String(course.est_minutes ?? 0),
+    objectives: (course.objectives ?? []).join("\n"), duration_value: course.duration_value == null ? "" : String(course.duration_value),
+    duration_unit: course.duration_unit ?? "",
     is_paid: course.is_paid !== false, price_inr: course.price_inr ? String(course.price_inr) : "", project_title: course.project_title ?? "", project_description: course.project_description ?? "" });
   const [msg, setMsg] = useState<string | null>(null);
   async function save(e: FormEvent) {
     e.preventDefault(); setMsg(null);
+    if ((f.duration_value === "") !== (f.duration_unit === "")) {
+      setMsg("Enter both a duration value and unit, or leave both unchanged.");
+      return;
+    }
     try {
       await http(`/admin/courses/${course.id}`, { method: "PATCH", body: { title: f.title, category_id: f.category_id, level: f.level, summary: f.summary,
-        objectives: f.objectives.split("\n").map((s: string) => s.trim()).filter(Boolean), est_minutes: Number(f.est_minutes) || 0,
+        objectives: f.objectives.split("\n").map((s: string) => s.trim()).filter(Boolean),
+        ...(f.duration_value !== "" ? { duration_value: Number(f.duration_value), duration_unit: f.duration_unit } : {}),
         is_paid: f.is_paid, price_inr: f.is_paid && f.price_inr ? Number(f.price_inr) : null, project_title: f.project_title.trim(), project_description: f.project_description.trim() } });
       onDone();
     } catch (er) { setMsg(errText(er)); }
@@ -169,7 +175,9 @@ export function CourseEditForm({ course, cats, onDone, onCancel }: { course: Obj
       <label>Level<select value={f.level} onChange={e => setF({ ...f, level: e.target.value })}><option>beginner</option><option>intermediate</option><option>advanced</option></select></label>
       <label>Summary<textarea className="editor" rows={3} value={f.summary} onChange={e => setF({ ...f, summary: e.target.value })} /></label>
       <label>What students will learn (one per line)<textarea className="editor" rows={4} value={f.objectives} onChange={e => setF({ ...f, objectives: e.target.value })} /></label>
-      <label>Estimated minutes<input type="number" min={0} max={6000} value={f.est_minutes} onChange={e => setF({ ...f, est_minutes: e.target.value })} /></label>
+      <label>Course duration<input type="number" min={1} max={100000} value={f.duration_value} onChange={e => setF({ ...f, duration_value: e.target.value })} /></label>
+      <label>Duration unit<select value={f.duration_unit} onChange={e => setF({ ...f, duration_unit: e.target.value })}><option value="">Keep existing duration</option><option value="days">Days</option><option value="months">Months</option><option value="hours">Hours</option></select></label>
+      {!course.duration_unit && course.est_minutes > 0 && <p className="muted">Existing duration: {course.est_minutes} minutes (legacy). Set a new duration above to replace it.</p>}
       <h4>Price</h4>
       <label>Certificate<select value={f.is_paid ? "paid" : "free"} onChange={e => setF({ ...f, is_paid: e.target.value === "paid" })}><option value="paid">Paid</option><option value="free">Free</option></select></label>
       {f.is_paid && <label>Price in rupees (empty = the default price from Settings)<input type="number" min={1} max={100000} value={f.price_inr} onChange={e => setF({ ...f, price_inr: e.target.value })} /></label>}

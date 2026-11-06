@@ -134,6 +134,35 @@ a.tile:hover { border-color: var(--forge); } .tile.off { opacity: .75; }
 .q { padding: 16px; } .q .opt { padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; margin: 8px 0; }
 .q .opt:has(input:checked) { border-color: var(--forge); background: color-mix(in srgb, var(--forge) 8%, transparent); }
 
+/* one-question-at-a-time quiz */
+.exam-page { width: min(100% - 24px, 760px); }
+.exam-header { margin-bottom: 24px; }
+.exam-header h1 { margin: 0 0 8px; }
+.exam-kind { margin: 0 0 4px; font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--forge); }
+.exam-progress { margin-bottom: 18px; }
+.exam-progress-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: .9rem; }
+.exam-progress .bar-track { height: 7px; }
+.exam-progress .bar-fill { transition: width .2s ease; }
+.exam-question { padding: clamp(18px, 4vw, 30px); }
+.exam-question h2 { margin: 0 0 18px; font-size: clamp(1.25rem, 3vw, 1.65rem); line-height: 1.35; overflow-wrap: anywhere; }
+.exam-question > .muted { margin: -10px 0 18px; }
+.exam-options { display: grid; gap: 10px; }
+.exam-question .exam-option { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 12px 14px; margin: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); transition: border-color .15s, background .15s, transform .15s; }
+.exam-question .exam-option:hover { border-color: var(--forge); transform: translateY(-1px); }
+.exam-question .exam-option.selected { border-color: var(--forge); background: color-mix(in srgb, var(--forge) 8%, var(--surface)); }
+.exam-option input { flex: none; width: 18px; height: 18px; accent-color: var(--forge); }
+.exam-option-letter { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 9px; background: color-mix(in srgb, var(--line) 55%, transparent); color: var(--steel); font-size: .82rem; font-weight: 700; }
+.exam-option.selected .exam-option-letter { background: var(--forge); color: var(--forge-ink); }
+.exam-short-answer { max-width: 100%; }
+.exam-short-answer input { width: 100%; min-width: 0; margin-top: 6px; }
+.exam-hint { min-height: 1.5em; margin: 10px 0 0; font-size: .9rem; }
+.exam-navigation { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; }
+.exam-navigation button { min-width: 112px; }
+@media (max-width: 480px) {
+  .exam-page { width: 100%; }
+  .exam-navigation button { flex: 1; }
+}
+
 /* phone bottom bar */
 .bottomnav { display: none; }
 @media (max-width: 800px) {

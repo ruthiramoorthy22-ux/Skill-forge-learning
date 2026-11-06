@@ -215,6 +215,8 @@ class CourseIn(BaseModel):
     summary: str = Field("", max_length=2000)
     objectives: List[str] = Field(default_factory=list, max_length=20)
     est_minutes: int = Field(0, ge=0, le=6000)
+    duration_value: Optional[int] = Field(None, ge=1, le=100_000)
+    duration_unit: Optional[Literal["days", "months", "hours"]] = None
     published: bool = False
     is_paid: bool = True                                   # False = free course, no payment before the certificate
     price_inr: Optional[int] = Field(None, ge=1, le=100_000)  # None = the default price from Settings
@@ -227,6 +229,8 @@ class CourseIn(BaseModel):
             raise ValueError("unknown category_id")
         if any(len(o) > 200 for o in self.objectives):
             raise ValueError("objective too long")
+        if (self.duration_value is None) != (self.duration_unit is None):
+            raise ValueError("duration_value and duration_unit must be provided together")
         return self
 
 
@@ -237,11 +241,19 @@ class CoursePatch(BaseModel):
     summary: Optional[str] = Field(None, max_length=2000)
     objectives: Optional[List[str]] = Field(None, max_length=20)
     est_minutes: Optional[int] = Field(None, ge=0, le=6000)
+    duration_value: Optional[int] = Field(None, ge=1, le=100_000)
+    duration_unit: Optional[Literal["days", "months", "hours"]] = None
     published: Optional[bool] = None
     is_paid: Optional[bool] = None
     price_inr: Optional[int] = Field(None, ge=1, le=100_000)   # send null to go back to the default price
     project_title: Optional[str] = Field(None, max_length=160)
     project_description: Optional[str] = Field(None, max_length=3000)
+
+    @model_validator(mode="after")
+    def _check_duration(self):
+        if (self.duration_value is None) != (self.duration_unit is None):
+            raise ValueError("duration_value and duration_unit must be provided together")
+        return self
 
 
 def _announce_course(db: Session, c: Course) -> None:
@@ -259,6 +271,7 @@ def admin_courses(_: User = Depends(require_admin), db: Session = Depends(get_db
         done = sum(1 for e in enr if completion(db, e.user_id, c)["completed"])
         items.append({"id": c.id, "slug": c.slug, "title": c.title, "level": c.level, "published": c.published, "status": c.status,
                       "category_id": c.category_id, "summary": c.summary, "objectives": c.objectives, "est_minutes": c.est_minutes,
+                      "duration_value": c.duration_value, "duration_unit": c.duration_unit,
                       "is_paid": c.is_paid, "price_inr": c.price_inr, "effective_price_inr": certificates.price_for(db, c),
                       "project_title": c.project_title, "project_description": c.project_description,
                       "modules": [{"id": m.id, "title": m.title} for m in c.modules], "lessons": len(lessons),
@@ -464,6 +477,7 @@ def admin_course(course_id: int, _: User = Depends(require_admin), db: Session =
     if c is None:
         raise HTTPException(status_code=404, detail="Course not found")
     return {"id": c.id, "slug": c.slug, "title": c.title, "published": c.published,
+            "duration_value": c.duration_value, "duration_unit": c.duration_unit, "est_minutes": c.est_minutes,
             "modules": [{"id": m.id, "title": m.title,
                          "lessons": [{"id": l.id, "slug": l.slug, "title": l.title, "published": l.published} for l in m.lessons]}
                         for m in c.modules]}

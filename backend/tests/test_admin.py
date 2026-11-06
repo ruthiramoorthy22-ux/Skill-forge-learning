@@ -83,6 +83,8 @@ def test_course_lifecycle_preserves_progress_and_is_audited():
     seed_all()
     a = admin()
     assert a.post("/api/admin/courses", json={"slug": "x", "title": "T", "category_id": "nope", "level": "beginner"}).status_code == 422
+    assert a.post("/api/admin/courses", json={"slug": "bad-duration", "title": "Bad duration", "category_id": "database-backend",
+                                                "level": "beginner", "duration_value": 3}).status_code == 422
     body = {"slug": "intro-sql", "title": "Intro SQL", "category_id": "database-backend", "level": "beginner", "summary": "s",
             "objectives": ["o"], "est_minutes": 30}
     cid = a.post("/api/admin/courses", json=body).json()["id"]
@@ -91,9 +93,14 @@ def test_course_lifecycle_preserves_progress_and_is_audited():
     lesson = {"module_id": mid, "slug": "select", "title": "SELECT", "body_md": "Hello", "example_lang": "python", "published": True}
     lid = a.post("/api/admin/lessons", json=lesson).json()["id"]
     assert a.post("/api/admin/lessons", json=lesson).status_code == 409
+    assert a.patch(f"/api/admin/courses/{cid}", json={"duration_value": 30, "duration_unit": "days"}).status_code == 200
+    assert a.get("/api/admin/courses").json()["items"][-1]["duration_value"] == 30
+    assert a.patch(f"/api/admin/courses/{cid}", json={"duration_value": 3, "duration_unit": "months"}).status_code == 200
     assert a.get("/api/courses?status=available").json()["total"] == 3          # unpublished course is hidden
     a.patch(f"/api/admin/courses/{cid}", json={"published": True})
     assert "intro-sql" in {c["slug"] for c in a.get("/api/courses?status=available").json()["items"]}
+    course_detail = a.get("/api/courses/intro-sql").json()
+    assert (course_detail["duration_value"], course_detail["duration_unit"], course_detail["est_minutes"]) == (3, "months", 30)
     s = student(enroll="intro-sql")
     assert s.get("/api/courses/intro-sql/lessons/select").json()["body_md"] == "Hello"
     s.post("/api/courses/intro-sql/lessons/select/complete")
@@ -190,10 +197,10 @@ def test_legacy_course_schema_migration_preserves_ids_and_backfills_status(monke
         )"""))
         conn.execute(text("""INSERT INTO courses
             (id, slug, title, category_id, level, summary, objectives, est_minutes, published)
-            VALUES (73, 'python', 'Python', 'programming-languages', 'beginner', '', '[]', 0, TRUE)"""))
+            VALUES (73, 'python', 'Python', 'programming-languages', 'beginner', '', '[]', 75, TRUE)"""))
         conn.execute(text("""INSERT INTO courses
             (id, slug, title, category_id, level, summary, objectives, est_minutes, published)
-            VALUES (91, 'html5', 'HTML5', 'web-development', 'beginner', '', '[]', 0, FALSE)"""))
+            VALUES (91, 'html5', 'HTML5', 'web-development', 'beginner', '', '[]', 45, FALSE)"""))
 
     monkeypatch.setattr(app_main, "engine", legacy_engine)
     monkeypatch.setattr(app_main, "SessionLocal", sessionmaker(bind=legacy_engine))
@@ -201,8 +208,25 @@ def test_legacy_course_schema_migration_preserves_ids_and_backfills_status(monke
     app_main.backfill_course_statuses()
 
     with legacy_engine.connect() as conn:
-        rows = conn.execute(text("SELECT id, slug, status FROM courses ORDER BY id")).all()
-    assert rows == [(73, "python", "available"), (91, "html5", "in_development")]
+        rows = conn.execute(text("SELECT id, slug, status, duration_value, duration_unit, est_minutes FROM courses ORDER BY id")).all()
+    assert rows == [(73, "python", "available", None, None, 75), (91, "html5", "in_development", None, None, 45)]
+
+
+def test_course_duration_persists_all_supported_units():
+    seed_all()
+    a = admin()
+    for unit, value in (("days", 30), ("months", 3), ("hours", 120)):
+        slug = f"duration-{unit}"
+        response = a.post("/api/admin/courses", json={
+            "slug": slug, "title": f"Duration {unit}", "category_id": "programming-languages",
+            "level": "beginner", "published": True, "duration_value": value, "duration_unit": unit,
+        })
+        assert response.status_code == 201
+        course_id = response.json()["id"]
+        admin_detail = a.get(f"/api/admin/courses/{course_id}").json()
+        student_detail = a.get(f"/api/courses/{slug}").json()
+        assert (admin_detail["duration_value"], admin_detail["duration_unit"]) == (value, unit)
+        assert (student_detail["duration_value"], student_detail["duration_unit"]) == (value, unit)
 
 
 def test_admin_quiz_validation_and_publish_toggle():

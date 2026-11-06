@@ -91,7 +91,7 @@ function Live() {
 function Courses() {
   const { data, err, load } = useLoad<Obj>("/admin/courses");
   const [cats, setCats] = useState<Category[]>([]);
-  const [f, setF] = useState({ slug: "", title: "", category_id: "", level: "beginner", summary: "", is_paid: true, price_inr: "", project_title: "", project_description: "" });
+  const [f, setF] = useState({ slug: "", title: "", category_id: "", level: "beginner", summary: "", duration_value: "", duration_unit: "hours", is_paid: true, price_inr: "", project_title: "", project_description: "" });
   const [msg, setMsg] = useState<string | null>(null);
   const [managing, setManaging] = useState<number | null>(null);
   const [editing, setEditing] = useState<Obj | null>(null);
@@ -126,7 +126,7 @@ function Courses() {
   }
   async function create(e: FormEvent) {
     e.preventDefault(); setMsg(null);
-    try { await http("/admin/courses", { method: "POST", body: { ...f, price_inr: f.is_paid && f.price_inr ? Number(f.price_inr) : null } }); setMsg("Course created as a draft. Click Manage lessons to add modules and lessons, then Publish."); setF({ ...f, slug: "", title: "", summary: "", price_inr: "", project_title: "", project_description: "" }); load(); }
+    try { await http("/admin/courses", { method: "POST", body: { ...f, duration_value: Number(f.duration_value), price_inr: f.is_paid && f.price_inr ? Number(f.price_inr) : null } }); setMsg("Course created as a draft. Click Manage lessons to add modules and lessons, then Publish."); setF({ ...f, slug: "", title: "", summary: "", duration_value: "", price_inr: "", project_title: "", project_description: "" }); load(); }
     catch (er) { setMsg(errText(er)); }
   }
   if (editing) return <CourseEditForm course={editing} cats={cats} onCancel={() => setEditing(null)} onDone={() => { setEditing(null); setMsg("Course saved."); load(); }} />;
@@ -136,8 +136,8 @@ function Courses() {
       <Err e={err} />
       <button className="solid" disabled={!data || publishingAll} onClick={publishAll}>{publishingAll ? "Publishing..." : `Publish All ${data?.items.length ?? 0} Courses`}</button>
       {msg && <p role="status">{msg}</p>}
-      <div className="scroll"><table><thead><tr><th>Course</th><th>Status</th><th>Price</th><th>Project</th><th>Lessons</th><th>Enrollments</th><th>Completion</th><th></th></tr></thead>
-        <tbody>{data?.items.map((c: Obj) => <tr key={c.id}><td>{c.title}</td><td>{c.status}</td><td>{c.is_paid ? `Rs ${c.effective_price_inr}` : "Free"} <button className="ghost" onClick={() => togglePaid(c)}>{c.is_paid ? "Make free" : "Make paid"}</button></td><td>{c.project_title || "-"}</td><td>{c.lessons}</td><td>{c.enrollments}</td>
+      <div className="scroll"><table><thead><tr><th>Course</th><th>Status</th><th>Duration</th><th>Price</th><th>Project</th><th>Lessons</th><th>Enrollments</th><th>Completion</th><th></th></tr></thead>
+        <tbody>{data?.items.map((c: Obj) => <tr key={c.id}><td>{c.title}</td><td>{c.status}</td><td>{c.duration_value && c.duration_unit ? `${c.duration_value} ${c.duration_unit}` : c.est_minutes ? `${c.est_minutes} minutes (legacy)` : "Not set"}</td><td>{c.is_paid ? `Rs ${c.effective_price_inr}` : "Free"} <button className="ghost" onClick={() => togglePaid(c)}>{c.is_paid ? "Make free" : "Make paid"}</button></td><td>{c.project_title || "-"}</td><td>{c.lessons}</td><td>{c.enrollments}</td>
           <td>{c.completion_rate_pct === null ? "-" : `${c.completion_rate_pct}%`}</td><td><button className="ghost" onClick={() => setManaging(c.id)}>Manage lessons</button> <button className="ghost" onClick={() => setEditing(c)}>Edit</button> <button className="ghost" onClick={() => toggle(c)}>{c.published ? "Unpublish" : "Publish"}</button> <button className="ghost" onClick={() => remove(c)}>Delete</button></td></tr>)}</tbody></table></div>
       <h3>Create a course</h3>
       <form className="form" onSubmit={create}>
@@ -146,6 +146,8 @@ function Courses() {
         <label>Category<select value={f.category_id} onChange={e => setF({ ...f, category_id: e.target.value })}>{cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
         <label>Level<select value={f.level} onChange={e => setF({ ...f, level: e.target.value })}><option>beginner</option><option>intermediate</option><option>advanced</option></select></label>
         <label>Summary<input value={f.summary} onChange={e => setF({ ...f, summary: e.target.value })} /></label>
+        <label>Course duration<input required type="number" min={1} max={100000} value={f.duration_value} onChange={e => setF({ ...f, duration_value: e.target.value })} /></label>
+        <label>Duration unit<select required value={f.duration_unit} onChange={e => setF({ ...f, duration_unit: e.target.value })}><option value="days">Days</option><option value="months">Months</option><option value="hours">Hours</option></select></label>
         <label>Certificate<select value={f.is_paid ? "paid" : "free"} onChange={e => setF({ ...f, is_paid: e.target.value === "paid" })}><option value="paid">Paid</option><option value="free">Free</option></select></label>
         {f.is_paid && <label>Price in rupees (empty = default price from Settings)<input type="number" min={1} max={100000} value={f.price_inr} onChange={e => setF({ ...f, price_inr: e.target.value })} /></label>}
         <label>Project name for this course (optional)<input maxLength={160} value={f.project_title} onChange={e => setF({ ...f, project_title: e.target.value })} /></label>

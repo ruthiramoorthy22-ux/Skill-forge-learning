@@ -85,7 +85,12 @@ export default function CourseDetailPage() {
         <p className="chips"><span className={`tag ${course.level}`}>{course.level}</span> <span className="tag">{course.category_name}</span></p>
         <h1>{course.title}</h1>
         {course.price_inr !== undefined && <p><span className={`tag price ${course.is_free ? "free" : "paid"}`}>{course.is_free ? "Free course · free certificate" : `Certificate ₹${course.price_inr}`}</span></p>}
-        {course.outline && <p className="muted">{course.lesson_count} lessons · about {course.est_minutes} minutes</p>}
+        {(course.outline || (course.duration_value && course.duration_unit)) && <p className="muted">
+          {course.outline && `${course.lesson_count} lessons · `}
+          {course.duration_value && course.duration_unit
+            ? `Duration: ${course.duration_value} ${course.duration_unit[0].toUpperCase()}${course.duration_unit.slice(1)}`
+            : `about ${course.est_minutes} minutes`}
+        </p>}
         {enrolled && progress && (<>
           <div className="bar-track fat" role="progressbar" aria-valuenow={progress.percent} aria-valuemin={0} aria-valuemax={100}><div className="bar-fill" style={{ width: `${progress.percent}%` }} /></div>
           <p className="muted">{progress.completed.length} of {progress.total} lessons ({progress.percent}%)</p>

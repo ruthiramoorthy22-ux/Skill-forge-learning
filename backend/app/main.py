@@ -39,6 +39,8 @@ NEW_COLUMNS = [
     # v7: pricing per course, the project the admin assigns, payment details, profile picture
     ("courses", "is_paid", "BOOLEAN NOT NULL DEFAULT TRUE"),   # existing courses keep charging for the certificate
     ("courses", "price_inr", "INTEGER"),
+    ("courses", "duration_value", "INTEGER"),
+    ("courses", "duration_unit", "VARCHAR(10)"),
     ("courses", "project_title", "VARCHAR(160) NOT NULL DEFAULT ''"),
     ("courses", "project_description", "TEXT NOT NULL DEFAULT ''"),
     ("courses", "status", "VARCHAR(20)"),

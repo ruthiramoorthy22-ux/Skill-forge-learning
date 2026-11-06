@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ApiError, http } from "../api";
 
@@ -15,19 +15,25 @@ export default function Quiz() {
   const { id = "" } = useParams();
   const [quiz, setQuiz] = useState<Started | null>(null);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
   const [res, setRes] = useState<Outcome | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [courseSlug, setCourseSlug] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const submittingRef = useRef(false);
 
   const start = () => {
     setRes(null); setPending(null); setAnswers({}); setErr(null); setQuiz(null);
+    setQuestionIndex(0); setSubmitting(false); submittingRef.current = false;
     http<Started>(`/quizzes/${id}/start`, { method: "POST" }).then(setQuiz).catch(e => setErr(e.message));
   };
   useEffect(start, [id]);
 
   async function submit() {
-    if (!quiz) return;
+    if (!quiz || submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
     try {
       const out = await http<Outcome | Pending>(`/quizzes/${id}/submit`, { method: "POST", body: { attempt_id: quiz.attempt_id, answers } });
       if ("pending_review" in out) {  // final exam: no marks, no answers; the admin releases the result
@@ -36,11 +42,15 @@ export default function Quiz() {
       } else setRes(out);
     }
     catch (e) { setErr(e instanceof ApiError ? e.message : "Could not submit."); }
+    finally { submittingRef.current = false; setSubmitting(false); }
   }
-  const pick = (q: Q, opt: string, checked: boolean) => setAnswers(a => {
-    const cur = a[q.id] ?? [];
-    return { ...a, [q.id]: q.qtype === "single" ? [opt] : checked ? [...cur, opt] : cur.filter(x => x !== opt) };
-  });
+  const pick = (q: Q, opt: string, checked: boolean) => {
+    setErr(null);
+    setAnswers(a => {
+      const cur = a[q.id] ?? [];
+      return { ...a, [q.id]: q.qtype === "single" ? [opt] : checked ? [...cur, opt] : cur.filter(x => x !== opt) };
+    });
+  };
 
   if (err && !quiz) return <section className="page"><p role="alert" className="err">{err}</p><Link to="/courses">Back to courses</Link></section>;
   if (!quiz) return <section className="page"><p>Loading…</p></section>;
@@ -72,26 +82,51 @@ export default function Quiz() {
       </section>
     );
   }
+  const question = quiz.questions[questionIndex];
+  if (!question) return <section className="page"><p role="alert" className="err">This quiz has no available questions.</p><Link to="/courses">Back to courses</Link></section>;
+  const selected = answers[question.id] ?? [];
+  const hasAnswer = question.qtype === "short" ? !!selected[0]?.trim() : selected.length > 0;
+  const lastQuestion = questionIndex === quiz.questions.length - 1;
   return (
-    <section className="page">
-      <h1>{quiz.title}</h1>
-      <p className="muted">{quiz.kind === "practice" ? "Practice: free, unlimited, and it does not change your course result. " : quiz.kind === "final" ? "Final exam. " : "Topic test. "}Pass mark {quiz.pass_mark}%.{quiz.time_limit_minutes ? ` Time limit: ${quiz.time_limit_minutes} minutes, enforced by the server.` : ""}</p>
-      <ol>{quiz.questions.map(q => (
-        <li key={q.id}>
-          <fieldset className="q"><legend>{q.prompt}{q.qtype === "multiple" ? " (choose all that apply)" : ""}</legend>
-            {q.qtype === "short" ? (
-              <input value={answers[q.id]?.[0] ?? ""} onChange={e => setAnswers(a => ({ ...a, [q.id]: [e.target.value] }))} maxLength={200} />
-            ) : q.options.map(o => (
-              <label key={o.id} className="opt">
-                <input type={q.qtype === "single" ? "radio" : "checkbox"} name={`q${q.id}`} checked={(answers[q.id] ?? []).includes(o.id)}
-                  onChange={e => pick(q, o.id, e.target.checked)} /> {o.text}
-              </label>
-            ))}
-          </fieldset>
-        </li>
-      ))}</ol>
+    <section className="page narrow exam-page">
+      <header className="exam-header">
+        <p className="muted exam-kind">{quiz.kind === "practice" ? "Practice" : quiz.kind === "final" ? "Final exam" : "Topic test"}</p>
+        <h1>{quiz.title}</h1>
+        <p className="muted">Pass mark {quiz.pass_mark}%.{quiz.time_limit_minutes ? ` Time limit: ${quiz.time_limit_minutes} minutes, enforced by the server.` : ""}</p>
+      </header>
+      <div className="exam-progress" aria-label={`Question ${questionIndex + 1} of ${quiz.questions.length}`}>
+        <div className="exam-progress-label"><strong>Question {questionIndex + 1} of {quiz.questions.length}</strong><span>{Math.round(((questionIndex + 1) / quiz.questions.length) * 100)}%</span></div>
+        <div className="bar-track" role="progressbar" aria-valuenow={questionIndex + 1} aria-valuemin={1} aria-valuemax={quiz.questions.length}>
+          <div className="bar-fill" style={{ width: `${((questionIndex + 1) / quiz.questions.length) * 100}%` }} />
+        </div>
+      </div>
+      <div className="q exam-question" key={question.id}>
+        <h2>{question.prompt}</h2>
+        {question.qtype === "multiple" && <p className="muted">Choose all that apply.</p>}
+        <div className="exam-options">
+          {question.qtype === "short" ? (
+            <label className="exam-short-answer">Your answer
+              <input value={selected[0] ?? ""} onChange={e => { setErr(null); setAnswers(a => ({ ...a, [question.id]: [e.target.value] })); }} maxLength={200} />
+            </label>
+          ) : question.options.map((o, i) => (
+            <label key={o.id} className={`opt exam-option${selected.includes(o.id) ? " selected" : ""}`}>
+              <input type={question.qtype === "single" ? "radio" : "checkbox"} name={`q${question.id}`} checked={selected.includes(o.id)}
+                onChange={e => pick(question, o.id, e.target.checked)} />
+              <span className="exam-option-letter">{String.fromCharCode(65 + i)}</span><span>{o.text}</span>
+            </label>
+          ))}
+        </div>
+      </div>
       {err && <p role="alert" className="err">{err}</p>}
-      <button className="solid" onClick={submit}>Submit answers</button>
+      {!hasAnswer && <p className="muted exam-hint">Choose an answer to continue.</p>}
+      <nav className="exam-navigation" aria-label="Question navigation">
+        <button className="ghost" disabled={questionIndex === 0 || submitting} onClick={() => { setErr(null); setQuestionIndex(i => i - 1); }}>Previous</button>
+        {lastQuestion ? (
+          <button className="solid" disabled={!hasAnswer || submitting} onClick={submit}>{submitting ? "Submitting…" : quiz.kind === "final" ? "Submit Exam" : quiz.kind === "practice" ? "Submit practice" : "Submit Test"}</button>
+        ) : (
+          <button className="solid" disabled={!hasAnswer || submitting} onClick={() => { setErr(null); setQuestionIndex(i => i + 1); }}>Next</button>
+        )}
+      </nav>
     </section>
   );
 }
